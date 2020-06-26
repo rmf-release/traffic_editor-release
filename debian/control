@@ -1,0 +1,12 @@
+Source: ros-eloquent-building-map-tools
+Section: misc
+Priority: optional
+Maintainer: Morgan Quigley <mquigley@openrobotics.org>
+Build-Depends: debhelper (>= 9.0.0), ros-eloquent-building-map-msgs, ros-eloquent-ros-workspace, python3-all, python3-setuptools
+Homepage: 
+Standards-Version: 3.9.2
+
+Package: ros-eloquent-building-map-tools
+Architecture: any
+Depends: ${python3:Depends}, ${misc:Depends}, python-shapely, ros-eloquent-ament-index-python, ros-eloquent-building-map-msgs, ros-eloquent-rclpy, ros-eloquent-std-msgs, ros-eloquent-ros-workspace
+Description: Building map tools

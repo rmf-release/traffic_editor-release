@@ -299,6 +299,11 @@ Editor::Editor()
 
   // VIEW MENU
   QMenu *view_menu = menuBar()->addMenu("&View");
+  view_models_action =
+      view_menu->addAction("&Models", this, &Editor::view_models);
+  view_models_action->setCheckable(true);
+  view_models_action->setChecked(true);
+  view_menu->addSeparator();
 
   zoom_fit_action =
       view_menu->addAction("&Fit to Window", this, &Editor::zoom_fit);
@@ -765,6 +770,12 @@ void Editor::edit_transform()
   project.building.rotate_all_models(rotation);
   create_scene();
   setWindowModified(true);
+}
+
+void Editor::view_models()
+{
+  project.rendering_options.show_models = view_models_action->isChecked();
+  create_scene();
 }
 
 void Editor::zoom_fit()
@@ -1688,6 +1699,14 @@ void Editor::mouse_add_edge(
     const QPointF &p,
     const Edge::Type &edge_type)
 {
+  QPointF p_aligned(p);
+  if (clicked_idx >= 0 && e->modifiers() & Qt::ShiftModifier)
+  {
+    const auto& start =
+      project.building.levels[level_idx].vertices[clicked_idx];
+    align_point(QPointF(start.x, start.y), p_aligned);
+  }
+
   if (t == MOUSE_PRESS)
   {
     if (e->buttons() & Qt::RightButton)
@@ -1700,12 +1719,12 @@ void Editor::mouse_add_edge(
 
     const int prev_clicked_idx = clicked_idx;
     clicked_idx = project.building.nearest_item_index_if_within_distance(
-        level_idx, p.x(), p.y(), 10.0, Building::VERTEX);
+        level_idx, p_aligned.x(), p_aligned.y(), 10.0, Building::VERTEX);
 
     if (clicked_idx < 0)
     {
       // current click is not on an existing vertex. Add one.
-      project.building.add_vertex(level_idx, p.x(), p.y());
+      project.building.add_vertex(level_idx, p_aligned.x(), p_aligned.y());
 
       // set the new vertex as "clicked_idx"  todo: encapsulate better
       clicked_idx =
@@ -1749,7 +1768,8 @@ void Editor::mouse_add_edge(
   {
     if (clicked_idx < 0)
       return;
-    draw_mouse_motion_line_item(p.x(), p.y());
+
+    draw_mouse_motion_line_item(p_aligned.x(), p_aligned.y());
   }
 }
 
@@ -1821,6 +1841,13 @@ double Editor::discretize_angle(const double &angle)
 {
   const double discretization = 45.0 * M_PI / 180.0;
   return discretization * round(angle / discretization);
+}
+
+void Editor::align_point(const QPointF &start, QPointF &end){
+  if (qAbs(start.x() - end.x()) < qAbs(start.y() - end.y()))
+    end.setX(start.x());
+  else
+    end.setY(start.y());
 }
 
 void Editor::mouse_rotate(

@@ -140,6 +140,7 @@ private:
   void update_level_buttons();
 
   void zoom_fit();
+  void view_models();
 
   void help_about();
 
@@ -171,6 +172,7 @@ private:
   QAction *save_action;
   QAction *zoom_in_action, *zoom_out_action;
   QAction *zoom_normal_action, *zoom_fit_action;
+  QAction *view_models_action;
 
   const QString tool_id_to_string(const int id);
   QButtonGroup *tool_button_group;
@@ -294,6 +296,7 @@ private:
 
   QGraphicsPixmapItem *get_closest_pixmap_item(const QPointF &p);
   double discretize_angle(const double &angle);
+  void align_point(const QPointF &start, QPointF &end);
 
   void mouse_select(const MouseType t, QMouseEvent *e, const QPointF &p);
   void mouse_move(const MouseType t, QMouseEvent *e, const QPointF &p);

@@ -1,0 +1,12 @@
+Source: ros-foxy-building-sim-common
+Section: misc
+Priority: optional
+Maintainer: Morgan Quigley <morgan@openrobotics.org>
+Build-Depends: debhelper (>= 9.0.0), libeigen3-dev, libqt5widgets5, ros-foxy-ament-cmake, ros-foxy-building-map-msgs, ros-foxy-geometry-msgs, ros-foxy-menge, ros-foxy-rclcpp, ros-foxy-rmf-door-msgs, ros-foxy-rmf-fleet-msgs, ros-foxy-rmf-lift-msgs, ros-foxy-std-msgs, ros-foxy-std-srvs, ros-foxy-tf2-ros, ros-foxy-ros-workspace
+Homepage: 
+Standards-Version: 3.9.2
+
+Package: ros-foxy-building-sim-common
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libqt5widgets5, ros-foxy-building-map-msgs, ros-foxy-geometry-msgs, ros-foxy-menge, ros-foxy-rclcpp, ros-foxy-rmf-door-msgs, ros-foxy-rmf-fleet-msgs, ros-foxy-rmf-lift-msgs, ros-foxy-std-msgs, ros-foxy-std-srvs, ros-foxy-tf2-ros, ros-foxy-ros-workspace
+Description: Common utility functions for Gazebo and ignition building plugins

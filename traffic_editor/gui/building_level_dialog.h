@@ -19,6 +19,7 @@
 #define BUILDING_LEVEL_DIALOG_H
 
 #include <QDialog>
+#include "traffic_editor/building.h"
 #include "traffic_editor/building_level.h"
 class QLineEdit;
 
@@ -26,19 +27,20 @@ class QLineEdit;
 class BuildingLevelDialog : public QDialog
 {
 public:
-  BuildingLevelDialog(BuildingLevel& level);
+  BuildingLevelDialog(BuildingLevel& level, Building& building);
   ~BuildingLevelDialog();
- 
+
 private:
   BuildingLevel& building_level;
+  Building& building;
 
-  QLineEdit *name_line_edit, *drawing_filename_line_edit;
-  QLineEdit *x_line_edit, *y_line_edit;
-  QLineEdit *flattened_x_offset_line_edit;
-  QLineEdit *flattened_y_offset_line_edit;
-  QLineEdit *elevation_line_edit;
-  QPushButton *drawing_filename_button;
-  QPushButton *ok_button, *cancel_button;
+  QLineEdit* name_line_edit, * drawing_filename_line_edit;
+  QLineEdit* x_line_edit, * y_line_edit;
+  QLineEdit* flattened_x_offset_line_edit;
+  QLineEdit* flattened_y_offset_line_edit;
+  QLineEdit* elevation_line_edit;
+  QPushButton* drawing_filename_button;
+  QPushButton* ok_button, * cancel_button;
 
   void enable_dimensions(const bool enable);
 

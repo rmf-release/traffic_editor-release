@@ -16,24 +16,26 @@
 */
 
 #include "lift_dialog.h"
+#include <cfloat>
 #include <QtWidgets>
 using std::vector;
 
 
-LiftDialog::LiftDialog(Lift& lift, const Building& building)
+LiftDialog::LiftDialog(Lift& lift, Building& building)
 : QDialog(),
-  _lift(lift)
+  _lift(lift),
+  _building(building)
 {
   setWindowTitle("Lift Properties");
   for (const auto& level : building.levels)
     _level_names.push_back(QString::fromStdString(level.name));
 
-  QHBoxLayout *bottom_buttons_hbox = new QHBoxLayout;
+  QHBoxLayout* bottom_buttons_hbox = new QHBoxLayout;
   _ok_button = new QPushButton("OK", this);  // first button = [enter] button
   bottom_buttons_hbox->addWidget(_ok_button);
   connect(
-      _ok_button, &QAbstractButton::clicked,
-      this, &LiftDialog::ok_button_clicked);
+    _ok_button, &QAbstractButton::clicked,
+    this, &LiftDialog::ok_button_clicked);
 
   _cancel_button = new QPushButton("Cancel", this);
   bottom_buttons_hbox->addWidget(_cancel_button);
@@ -43,10 +45,10 @@ LiftDialog::LiftDialog(Lift& lift, const Building& building)
     this,
     &QDialog::reject);
 
-  QHBoxLayout *name_hbox = new QHBoxLayout;
+  QHBoxLayout* name_hbox = new QHBoxLayout;
   name_hbox->addWidget(new QLabel("Name:"));
   _name_line_edit =
-      new QLineEdit(QString::fromStdString(_lift.name), this);
+    new QLineEdit(QString::fromStdString(_lift.name), this);
   connect(
     _name_line_edit,
     &QLineEdit::textEdited,
@@ -58,13 +60,13 @@ LiftDialog::LiftDialog(Lift& lift, const Building& building)
     });
   name_hbox->addWidget(_name_line_edit);
 
-  QHBoxLayout *ref_name_hbox = new QHBoxLayout;
+  QHBoxLayout* ref_name_hbox = new QHBoxLayout;
   ref_name_hbox->addWidget(new QLabel("Reference floor:"));
   _reference_floor_combo_box = new QComboBox;
   for (const QString& level_name : _level_names)
     _reference_floor_combo_box->addItem(level_name);
   _reference_floor_combo_box->setCurrentText(
-      QString::fromStdString(_lift.reference_floor_name));
+    QString::fromStdString(_lift.reference_floor_name));
   connect(
     _reference_floor_combo_box,
     &QComboBox::currentTextChanged,
@@ -75,38 +77,119 @@ LiftDialog::LiftDialog(Lift& lift, const Building& building)
     });
   ref_name_hbox->addWidget(_reference_floor_combo_box);
 
-  QHBoxLayout *x_hbox = new QHBoxLayout;
+  QHBoxLayout* init_floor_hbox = new QHBoxLayout;
+  init_floor_hbox->addWidget(new QLabel("Initial floor:"));
+  _initial_floor_combo_box = new QComboBox;
+  for (const QString& level_name : _level_names)
+    _initial_floor_combo_box->addItem(level_name);
+  _initial_floor_combo_box->setCurrentText(
+    QString::fromStdString(_lift.initial_floor_name));
+  connect(
+    _initial_floor_combo_box,
+    &QComboBox::currentTextChanged,
+    [this](const QString& text)
+    {
+      _lift.initial_floor_name = text.toStdString();
+      emit redraw();
+    });
+  init_floor_hbox->addWidget(_initial_floor_combo_box);
+
+  QHBoxLayout* highest_name_hbox = new QHBoxLayout;
+  highest_name_hbox->addWidget(new QLabel("Highest floor:"));
+  _highest_floor_combo_box = new QComboBox;
+  for (const QString& level_name : _level_names)
+    _highest_floor_combo_box->addItem(level_name);
+  _highest_floor_combo_box->addItem("");  // empty string for not specifying
+  _highest_floor_combo_box->setCurrentText(
+    QString::fromStdString(_lift.highest_floor));
+  connect(
+    _highest_floor_combo_box,
+    &QComboBox::currentTextChanged,
+    [this](const QString& text)
+    {
+      _lift.highest_floor = text.toStdString();
+      if (_lift.highest_floor.empty())
+        _lift.highest_elevation = DBL_MAX;
+      else
+      {
+        for (const auto& level : _building.levels)
+        {
+          if (level.name == _lift.highest_floor)
+          {
+            _lift.highest_elevation = level.elevation;
+            break;
+          }
+        }
+      }
+      update_level_table();
+      emit redraw();
+    });
+  highest_name_hbox->addWidget(_highest_floor_combo_box);
+
+  QHBoxLayout* lowest_name_hbox = new QHBoxLayout;
+  lowest_name_hbox->addWidget(new QLabel("Lowest floor:"));
+  _lowest_floor_combo_box = new QComboBox;
+  for (const QString& level_name : _level_names)
+    _lowest_floor_combo_box->addItem(level_name);
+  _lowest_floor_combo_box->addItem("");
+  _lowest_floor_combo_box->setCurrentText(
+    QString::fromStdString(_lift.lowest_floor));
+  connect(
+    _lowest_floor_combo_box,
+    &QComboBox::currentTextChanged,
+    [this](const QString& text)
+    {
+      _lift.lowest_floor = text.toStdString();
+      if (_lift.lowest_floor.empty())
+        _lift.lowest_elevation = -DBL_MAX;
+      else
+      {
+        for (const auto& level : _building.levels)
+        {
+          if (level.name == _lift.lowest_floor)
+          {
+            _lift.lowest_elevation = level.elevation;
+            break;
+          }
+        }
+      }
+      update_level_table();
+      emit redraw();
+    });
+  lowest_name_hbox->addWidget(_lowest_floor_combo_box);
+
+  QHBoxLayout* x_hbox = new QHBoxLayout;
   x_hbox->addWidget(new QLabel("X:"));
   _x_line_edit =
-      new QLineEdit(QString::number(_lift.x), this);
+    new QLineEdit(QString::number(_lift.x), this);
   connect(
     _x_line_edit,
     &QLineEdit::textEdited,
     [this](const QString& text)
     {
       _lift.x = text.toDouble();
-      emit redraw();
+      update_lift_wps();
     });
   x_hbox->addWidget(_x_line_edit);
 
-  QHBoxLayout *y_hbox = new QHBoxLayout;
+  QHBoxLayout* y_hbox = new QHBoxLayout;
   y_hbox->addWidget(new QLabel("Y:"));
   _y_line_edit =
-      new QLineEdit(QString::number(_lift.y), this);
+    new QLineEdit(QString::number(_lift.y), this);
   connect(
     _y_line_edit,
     &QLineEdit::textEdited,
     [this](const QString& text)
     {
       _lift.y = text.toDouble();
-      emit redraw();
+      update_lift_wps();
     });
   y_hbox->addWidget(_y_line_edit);
 
-  QHBoxLayout *yaw_hbox = new QHBoxLayout;
+  QHBoxLayout* yaw_hbox = new QHBoxLayout;
   yaw_hbox->addWidget(new QLabel("Yaw:"));
   _yaw_line_edit =
-      new QLineEdit(QString::number(_lift.yaw), this);
+    new QLineEdit(QString::number(_lift.yaw), this);
   connect(
     _yaw_line_edit,
     &QLineEdit::textEdited,
@@ -118,10 +201,10 @@ LiftDialog::LiftDialog(Lift& lift, const Building& building)
     });
   yaw_hbox->addWidget(_yaw_line_edit);
 
-  QHBoxLayout *width_hbox = new QHBoxLayout;
+  QHBoxLayout* width_hbox = new QHBoxLayout;
   width_hbox->addWidget(new QLabel("Cabin width:"));
-  _width_line_edit = 
-      new QLineEdit(QString::number(_lift.width), this);
+  _width_line_edit =
+    new QLineEdit(QString::number(_lift.width), this);
   connect(
     _width_line_edit,
     &QLineEdit::textEdited,
@@ -133,10 +216,10 @@ LiftDialog::LiftDialog(Lift& lift, const Building& building)
     });
   width_hbox->addWidget(_width_line_edit);
 
-  QHBoxLayout *depth_hbox = new QHBoxLayout;
+  QHBoxLayout* depth_hbox = new QHBoxLayout;
   depth_hbox->addWidget(new QLabel("Cabin depth:"));
-  _depth_line_edit = 
-      new QLineEdit(QString::number(_lift.depth), this);
+  _depth_line_edit =
+    new QLineEdit(QString::number(_lift.depth), this);
   connect(
     _depth_line_edit,
     &QLineEdit::textEdited,
@@ -147,6 +230,13 @@ LiftDialog::LiftDialog(Lift& lift, const Building& building)
       emit redraw();
     });
   depth_hbox->addWidget(_depth_line_edit);
+
+  QHBoxLayout* add_wp_hbox = new QHBoxLayout;
+  _add_wp_button = new QPushButton("Add lift waypoints", this);
+  add_wp_hbox->addWidget(_add_wp_button);
+  connect(
+    _add_wp_button, &QAbstractButton::clicked,
+    this, &LiftDialog::update_lift_wps);
 
   _level_table = new QTableWidget;
   _level_table->setMinimumSize(200, 200);
@@ -167,42 +257,46 @@ LiftDialog::LiftDialog(Lift& lift, const Building& building)
 
   _door_table->setHorizontalHeaderItem(0, new QTableWidgetItem("Door name"));
   _door_table->horizontalHeader()->setSectionResizeMode(
-      0, QHeaderView::Stretch);
+    0, QHeaderView::Stretch);
 
   _door_table->setHorizontalHeaderItem(1, new QTableWidgetItem("Door type"));
   _door_table->horizontalHeader()->setSectionResizeMode(
-      1, QHeaderView::ResizeToContents);
+    1, QHeaderView::ResizeToContents);
 
   _door_table->setHorizontalHeaderItem(2, new QTableWidgetItem("X"));
   _door_table->horizontalHeader()->setSectionResizeMode(
-      2, QHeaderView::ResizeToContents);
+    2, QHeaderView::ResizeToContents);
 
   _door_table->setHorizontalHeaderItem(3, new QTableWidgetItem("Y"));
   _door_table->horizontalHeader()->setSectionResizeMode(
-      3, QHeaderView::ResizeToContents);
+    3, QHeaderView::ResizeToContents);
 
   _door_table->setHorizontalHeaderItem(4, new QTableWidgetItem("Orientation"));
   _door_table->horizontalHeader()->setSectionResizeMode(
-      4, QHeaderView::ResizeToContents);
+    4, QHeaderView::ResizeToContents);
 
   _door_table->setHorizontalHeaderItem(5, new QTableWidgetItem("Width"));
   _door_table->horizontalHeader()->setSectionResizeMode(
-      5, QHeaderView::ResizeToContents);
+    5, QHeaderView::ResizeToContents);
 
   _door_table->verticalHeader()->setSectionResizeMode(
-      QHeaderView::ResizeToContents);
+    QHeaderView::ResizeToContents);
 
-  QVBoxLayout *left_vbox = new QVBoxLayout;
+  QVBoxLayout* left_vbox = new QVBoxLayout;
   left_vbox->addLayout(name_hbox);
   left_vbox->addLayout(ref_name_hbox);
+  left_vbox->addLayout(highest_name_hbox);
+  left_vbox->addLayout(lowest_name_hbox);
+  left_vbox->addLayout(init_floor_hbox);
   left_vbox->addLayout(x_hbox);
   left_vbox->addLayout(y_hbox);
   left_vbox->addLayout(yaw_hbox);
   left_vbox->addLayout(width_hbox);
   left_vbox->addLayout(depth_hbox);
+  left_vbox->addLayout(add_wp_hbox);
   left_vbox->addWidget(_level_table);
 
-  QVBoxLayout *right_vbox = new QVBoxLayout;
+  QVBoxLayout* right_vbox = new QVBoxLayout;
 
   _lift_scene = new QGraphicsScene;
 
@@ -213,11 +307,11 @@ LiftDialog::LiftDialog(Lift& lift, const Building& building)
 
   right_vbox->addWidget(_door_table);
 
-  QHBoxLayout *top_hbox = new QHBoxLayout;
+  QHBoxLayout* top_hbox = new QHBoxLayout;
   top_hbox->addLayout(left_vbox);
   top_hbox->addLayout(right_vbox, 1);
 
-  QVBoxLayout *top_vbox = new QVBoxLayout;
+  QVBoxLayout* top_vbox = new QVBoxLayout;
   top_vbox->addLayout(top_hbox);
   // todo: some sort of separator (?)
   top_vbox->addLayout(bottom_buttons_hbox);
@@ -230,8 +324,8 @@ LiftDialog::LiftDialog(Lift& lift, const Building& building)
   update_level_table();
 
   connect(
-      _door_table, &QTableWidget::cellChanged,
-      this, &LiftDialog::door_table_cell_changed);
+    _door_table, &QTableWidget::cellChanged,
+    this, &LiftDialog::door_table_cell_changed);
 
   update_lift_view();
   adjustSize();
@@ -249,9 +343,17 @@ void LiftDialog::ok_button_clicked()
     return;
   }
 
+  if (_lift.lowest_elevation > _lift.highest_elevation)
+  {
+    QMessageBox::critical(this, "Error", "Lowest floor above highest floor");
+    return;
+  }
+  /*
   _lift.name = _name_line_edit->text().toStdString();
   _lift.reference_floor_name =
-      _reference_floor_combo_box->currentText().toStdString();
+    _reference_floor_combo_box->currentText().toStdString();
+  _lift.highest_floor = _highest_floor_combo_box->currentText().toStdString();
+  _lift.lowest_floor = _lowest_floor_combo_box->currentText().toStdString();
 
   _lift.x = _x_line_edit->text().toDouble();
   _lift.y = _y_line_edit->text().toDouble();
@@ -259,39 +361,81 @@ void LiftDialog::ok_button_clicked()
 
   _lift.width = _width_line_edit->text().toDouble();
   _lift.depth = _depth_line_edit->text().toDouble();
-
+  */
   // grab all the level-door checkbox matrix states and save them
   for (int level_row = 0; level_row < _level_table->rowCount(); level_row++)
   {
     const std::string level_name =
-        _level_table->item(level_row, 0)->text().toStdString();
-    _lift.level_doors[level_name].clear();
+      _level_table->item(level_row, 0)->text().toStdString();
+    _lift.level_doors.erase(level_name);
     for (int door_col = 1; door_col < _level_table->columnCount(); door_col++)
     {
       const std::string door_name =
-          _level_table->horizontalHeaderItem(door_col)->text().toStdString();
-      const QWidget *widget = _level_table->cellWidget(level_row, door_col);
-      const QCheckBox *checkbox = qobject_cast<const QCheckBox *>(widget);
+        _level_table->horizontalHeaderItem(door_col)->text().toStdString();
+      const QWidget* widget = _level_table->cellWidget(level_row, door_col);
+      const QCheckBox* checkbox = qobject_cast<const QCheckBox*>(widget);
       if (checkbox)
       {
         const bool checked = checkbox->isChecked();
         printf("level %s door %s: %d\n",
-            level_name.c_str(),
-            door_name.c_str(),
-            checked ? 1 : 0);
+          level_name.c_str(),
+          door_name.c_str(),
+          checked ? 1 : 0);
         if (checked)
           _lift.level_doors[level_name].push_back(door_name);
       }
       else
       {
         printf("level %s door %s: indeterminate state!\n",
-            level_name.c_str(),
-            door_name.c_str());
+          level_name.c_str(),
+          door_name.c_str());
       }
     }
   }
-
+  update_lift_view();
+  emit redraw();
   accept();
+}
+
+void LiftDialog::update_lift_wps()
+{
+  const QPointF from_point = QPointF(_lift.x, _lift.y);
+  QPointF to_point;
+
+  bool found = false;
+  for (size_t level_idx = 0; level_idx < _level_names.size(); level_idx++)
+  {
+    const std::string level_name = _level_names[level_idx].toStdString();
+    // Vertices will only be generated on levels that the lift is serving (has
+    // a door opening on that level)
+    if (_lift.level_doors[level_name].size() != 0)
+    {
+      _building.transform_between_levels(
+        _lift.reference_floor_name,
+        from_point,
+        _building.levels[level_idx].name,
+        to_point);
+      found = false;
+
+      for (auto& v : _building.levels[level_idx].vertices)
+      {
+        auto it = v.params.find("lift_cabin");
+        if ((it != v.params.end()) && (it->second.value_string == _lift.name))
+        {
+          v.x = to_point.x();
+          v.y = to_point.y();
+          found = true;
+        }
+      }
+      if (!found)
+      {
+        _building.add_vertex(level_idx, to_point.x(), to_point.y());
+        _building.levels[level_idx].vertices.back().params["lift_cabin"] =
+          _lift.name;
+      }
+    }
+  }
+  emit redraw();
 }
 
 void LiftDialog::update_door_table()
@@ -310,7 +454,7 @@ void LiftDialog::update_door_table()
     set_door_cell(i, 5, QString::number(door.width));
 
     // create a drop-down list for the door type
-    QComboBox *type_box = new QComboBox;
+    QComboBox* type_box = new QComboBox;
     type_box->addItem("<undefined>", QVariant(0));
     type_box->addItem("Single sliding", QVariant(1));
     type_box->addItem("Double sliding", QVariant(2));
@@ -328,26 +472,26 @@ void LiftDialog::update_door_table()
   _door_table->setCellWidget(last_row_idx, 2, nullptr);
   _door_table->setCellWidget(last_row_idx, 3, nullptr);
   _door_table->setCellWidget(last_row_idx, 4, nullptr);
-  QPushButton *add_button = new QPushButton("Add...", this);
+  QPushButton* add_button = new QPushButton("Add...", this);
   _door_table->setCellWidget(last_row_idx, 5, add_button);
   connect(
-      add_button,
-      &QAbstractButton::clicked,
-      [this]()
-      {
-        LiftDoor door;
-        door.name = "name";
-        door.door_type = LiftDoor::DOUBLE_SLIDING;
-        _lift.doors.push_back(door);
-        update_door_table();
-        update_lift_view();
-      });
+    add_button,
+    &QAbstractButton::clicked,
+    [this]()
+    {
+      LiftDoor door;
+      door.name = "name";
+      door.door_type = LiftDoor::DOUBLE_SLIDING;
+      _lift.doors.push_back(door);
+      update_door_table();
+      update_lift_view();
+    });
 }
 
 void LiftDialog::set_door_cell(
-    const int row,
-    const int col,
-    const QString &text)
+  const int row,
+  const int col,
+  const QString& text)
 {
   _door_table->setItem(row, col, new QTableWidgetItem(text));
 }
@@ -359,26 +503,27 @@ void LiftDialog::update_level_table()
   for (size_t door_idx = 0; door_idx < _lift.doors.size(); door_idx++)
   {
     _level_table->setHorizontalHeaderItem(
-        door_idx + 1,
-        new QTableWidgetItem(
-            QString::fromStdString(_lift.doors[door_idx].name)));
+      door_idx + 1,
+      new QTableWidgetItem(
+        QString::fromStdString(_lift.doors[door_idx].name)));
   }
   //blockSignals(true);
   _level_table->setRowCount(_level_names.size());
   for (size_t level_idx = 0; level_idx < _level_names.size(); level_idx++)
   {
     const QString& level_name = _level_names[level_idx];
-    QTableWidgetItem *name_item = new QTableWidgetItem(level_name);
+    QTableWidgetItem* name_item = new QTableWidgetItem(level_name);
     name_item->setFlags(name_item->flags() & ~Qt::ItemIsEditable);
     _level_table->setItem(level_idx, 0, name_item);
 
     for (size_t door_idx = 0; door_idx < _lift.doors.size(); door_idx++)
     {
-      QCheckBox *checkbox = new QCheckBox;
+      QCheckBox* checkbox = new QCheckBox;
       checkbox->setStyleSheet("margin-left: 50%; margin-right: 50%");
       if (_lift.level_door_opens(
-            level_name.toStdString(),
-            _lift.doors[door_idx].name))
+          level_name.toStdString(),
+          _lift.doors[door_idx].name,
+          _building.levels))
         checkbox->setChecked(true);
       _level_table->setCellWidget(level_idx, door_idx + 1, checkbox);
     }
@@ -406,14 +551,14 @@ void LiftDialog::door_table_cell_changed(int row, int col)
   {
     // todo: door type
   }
-  else if (col == 2)  // x
+  else if (col == 2) // x
     _lift.doors[row].x = _door_table->item(row, col)->text().toDouble();
-  else if (col == 3)  // y
+  else if (col == 3) // y
     _lift.doors[row].y = _door_table->item(row, col)->text().toDouble();
-  else if (col == 4)  // orientation
+  else if (col == 4) // orientation
     _lift.doors[row].motion_axis_orientation =
-        _door_table->item(row, col)->text().toDouble();
-  else if (col == 5)  // width
+      _door_table->item(row, col)->text().toDouble();
+  else if (col == 5) // width
     _lift.doors[row].width = _door_table->item(row, col)->text().toDouble();
 
   update_lift_view();
@@ -423,5 +568,5 @@ void LiftDialog::door_table_cell_changed(int row, int col)
 void LiftDialog::update_lift_view()
 {
   _lift_scene->clear();
-  _lift.draw(_lift_scene, 0.01, std::string(), false);
+  _lift.draw(_lift_scene, 0.01, std::string(), _lift.lowest_elevation, false);
 }

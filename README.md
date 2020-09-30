@@ -1,3 +1,33 @@
+## traffic_editor (foxy) - 1.1.0-2
+
+The packages in the `traffic_editor` repository were released into the `foxy` distro by running `/usr/bin/bloom-release traffic_editor --rosdistro foxy` on `Wed, 30 Sep 2020 19:26:47 -0000`
+
+These packages were released:
+- `building_gazebo_plugins`
+- `building_ignition_plugins`
+- `building_map_msgs`
+- `building_map_tools`
+- `building_sim_common`
+- `test_maps`
+- `traffic_editor`
+
+Version of package(s) in repository `traffic_editor`:
+
+- upstream repository: https://github.com/osrf/traffic_editor.git
+- release repository: unknown
+- rosdistro version: `null`
+- old version: `1.1.0-1`
+- new version: `1.1.0-2`
+
+Versions of tools used:
+
+- bloom version: `0.9.8`
+- catkin_pkg version: `0.4.22`
+- rosdep version: `0.19.0`
+- rosdistro version: `0.8.2`
+- vcstools version: `0.1.42`
+
+
 ## traffic_editor (foxy) - 1.1.0-1
 
 The packages in the `traffic_editor` repository were released into the `foxy` distro by running `/usr/bin/bloom-release traffic_editor --rosdistro foxy` on `Wed, 30 Sep 2020 18:00:46 -0000`

@@ -1,0 +1,24 @@
+From 225fcd432f903e6f468052aa783e36c9be29dd82 Mon Sep 17 00:00:00 2001
+From: "Marco A. Gutierrez" <marcogg@marcogg.com>
+Date: Thu, 1 Oct 2020 02:47:36 +0000
+Subject: [PATCH] Removed menge dependency in package.xml
+
+---
+ package.xml | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/package.xml b/package.xml
+index 7f990a5..b1dee50 100644
+--- a/package.xml
++++ b/package.xml
+@@ -26,7 +26,6 @@
+   <depend>geometry_msgs</depend>
+   <depend>std_msgs</depend>
+   <depend>std_srvs</depend>
+-  <depend>menge</depend>
+   <depend>libqt5-widgets</depend>
+   <depend>qtbase5-dev</depend>
+ 
+-- 
+2.25.1
+

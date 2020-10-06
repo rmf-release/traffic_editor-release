@@ -1,0 +1,12 @@
+Source: ros-foxy-traffic-editor
+Section: misc
+Priority: optional
+Maintainer: Morgan Quigley <morgan@openrobotics.org>
+Build-Depends: debhelper (>= 9.0.0), libignition-common3-dev, libignition-plugin-dev, libqt5concurrent5, libqt5widgets5, libyaml-cpp-dev, qtbase5-dev, ros-foxy-ament-cmake, ros-foxy-ament-index-cpp, ros-foxy-ros-workspace
+Homepage: 
+Standards-Version: 3.9.2
+
+Package: ros-foxy-traffic-editor
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ros-foxy-ros-workspace
+Description: traffic editor

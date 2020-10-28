@@ -1,7 +1,7 @@
-From fc45250e8928c16b04723b55960ac16d79c78a20 Mon Sep 17 00:00:00 2001
+From e1c5963cf7204cbfa81d43ff7574d56f7f46a6f3 Mon Sep 17 00:00:00 2001
 From: "Marco A. Gutierrez" <marcogg@marcogg.com>
 Date: Thu, 1 Oct 2020 02:47:36 +0000
-Subject: [PATCH] Removed menge dependency in package.xml
+Subject: [PATCH 1/2] Removed menge dependency in package.xml
 
 ---
  package.xml | 1 -

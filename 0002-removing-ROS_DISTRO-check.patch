@@ -1,0 +1,37 @@
+From fceb185764edc49b847cce618176037964f026d2 Mon Sep 17 00:00:00 2001
+From: "Marco A. Gutierrez" <marco@openrobotics.org>
+Date: Wed, 28 Oct 2020 15:41:27 +0800
+Subject: [PATCH 2/2] removing ROS_DISTRO check
+
+---
+ CMakeLists.txt | 14 +++-----------
+ 1 file changed, 3 insertions(+), 11 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index a10d8f4..17d5364 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -131,17 +131,9 @@ endif()
+ ###############################
+ ament_export_include_directories(include)
+ 
+-if($ENV{ROS_DISTRO} STREQUAL foxy)
+-  ament_export_targets(slotcar_common HAS_LIBRARY_TARGET)
+-  ament_export_targets(door_common HAS_LIBRARY_TARGET)
+-  ament_export_targets(lift_common HAS_LIBRARY_TARGET)
+-elseif($ENV{ROS_DISTRO} STREQUAL eloquent)
+-  ament_export_interfaces(slotcar_common HAS_LIBRARY_TARGET)
+-  ament_export_interfaces(door_common HAS_LIBRARY_TARGET)
+-  ament_export_interfaces(lift_common HAS_LIBRARY_TARGET)
+-else()
+-  message(FATAL_ERROR "Unsupported ROS distribution")
+-endif()
++ament_export_targets(slotcar_common HAS_LIBRARY_TARGET)
++ament_export_targets(door_common HAS_LIBRARY_TARGET)
++ament_export_targets(lift_common HAS_LIBRARY_TARGET)
+ 
+ ament_export_dependencies(Eigen3)
+ 
+-- 
+2.25.1
+

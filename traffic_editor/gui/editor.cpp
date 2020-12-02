@@ -57,6 +57,7 @@
 #include "traffic_table.h"
 #include "ui_transform_dialog.h"
 
+
 using std::string;
 using std::isnan;
 
@@ -164,13 +165,26 @@ Editor::Editor()
       create_scene();
     });
 
+  crowd_sim_table = new CrowdSimEditorTable(project);
+  connect(
+    crowd_sim_table,
+    &QTableWidget::cellClicked,
+    [&]()
+    {
+      crowd_sim_table->update();
+      create_scene();
+    }
+  );
+
+
   right_tab_widget = new QTabWidget;
-  right_tab_widget->setStyleSheet("QTabBar::tab { color: white; }");
+  right_tab_widget->setStyleSheet("QTabBar::tab { color: black; }");
   right_tab_widget->addTab(level_table, "levels");
   right_tab_widget->addTab(layers_table, "layers");
   right_tab_widget->addTab(lift_table, "lifts");
   right_tab_widget->addTab(traffic_table, "traffic");
   right_tab_widget->addTab(scenario_table, "scenarios");
+  right_tab_widget->addTab(crowd_sim_table, "crowd_sim");
 
   property_editor = new QTableWidget;
   property_editor->setStyleSheet(
@@ -299,6 +313,12 @@ Editor::Editor()
     [this]() { this->set_mode(MODE_SCENARIO, "Scenario"); },
     QKeySequence(Qt::CTRL + Qt::Key_E));
 
+  mode_menu->addAction(
+    "&Crowd Simulation",
+    this,
+    [this]() { this->set_mode(MODE_CROWD_SIM, "CrowdSim"); },
+    QKeySequence(Qt::CTRL + Qt::Key_C));
+
   // VIEW MENU
   QMenu* view_menu = menuBar()->addMenu("&View");
   view_models_action =
@@ -324,6 +344,7 @@ Editor::Editor()
   mode_combo_box->addItem("Building");
   mode_combo_box->addItem("Traffic");
   mode_combo_box->addItem("Scenario");
+  mode_combo_box->addItem("Crowd_Sim");
   connect(
     mode_combo_box,
     &QComboBox::currentTextChanged,
@@ -335,6 +356,8 @@ Editor::Editor()
         set_mode(MODE_TRAFFIC, "Traffic");
       else if (text == "Scenario")
         set_mode(MODE_SCENARIO, "Scenario");
+      else if (text == "Crowd_Sim")
+        set_mode(MODE_CROWD_SIM, "CrowdSim");
     });
 
   QLabel* mode_label = new QLabel("Edit mode:");
@@ -362,6 +385,7 @@ Editor::Editor()
   create_tool_button(TOOL_ADD_HOLE, ":icons/hole.svg", "Add hole polygon");
   create_tool_button(TOOL_ADD_ROI, ":icons/roi.svg", "Add region of interest");
   create_tool_button(TOOL_EDIT_POLYGON, "", "Edit Polygon");
+  create_tool_button(TOOL_ADD_HUMAN_LANE, "", "Add Human Lane with width");
 
   connect(
     tool_button_group,
@@ -370,6 +394,7 @@ Editor::Editor()
 
   toolbar->addSeparator();
 
+#ifdef HAS_IGNITION_PLUGIN
   sim_reset_action = toolbar->addAction(
     "Reset",
     this,
@@ -388,7 +413,9 @@ Editor::Editor()
     this,
     &Editor::record_start_stop);
   record_start_stop_action->setVisible(false);
-#endif
+#endif  // HAS_OPENCV
+
+#endif  // HAS_IGNITION_PLUGIN
 
   toolbar->setStyleSheet(
     "QToolBar {background-color: #404040; border: none; spacing: 5px} QToolButton {background-color: #c0c0c0; color: blue; border: 1px solid black;} QToolButton:checked {background-color: #808080; color: red; border: 1px solid black;}");
@@ -426,6 +453,7 @@ Editor::Editor()
   load_model_names();
   level_table->setCurrentCell(level_idx, 0);
 
+#ifdef HAS_IGNITION_PLUGIN
   scene_update_timer = new QTimer;
   connect(
     scene_update_timer,
@@ -433,11 +461,12 @@ Editor::Editor()
     this,
     &Editor::scene_update_timer_timeout);
   scene_update_timer->start(1000 / 30);
+#endif
 }
 
 Editor::~Editor()
 {
-#ifdef HAS_OPENCV
+#if defined(HAS_OPENCV) && defined(HAS_IGNITION_PLUGIN)
   if (video_writer)
   {
     delete video_writer;
@@ -446,6 +475,7 @@ Editor::~Editor()
 #endif
 }
 
+#ifdef HAS_IGNITION_PLUGIN
 void Editor::scene_update_timer_timeout()
 {
   if (project.building.levels.empty())
@@ -484,8 +514,9 @@ void Editor::scene_update_timer_timeout()
 
 #ifdef HAS_OPENCV
   record_frame_to_video();
-#endif
+#endif  // HAS_OPENCV
 }
+#endif  // HAS_IGNITION_PLUGIN
 
 void Editor::load_model_names()
 {
@@ -599,6 +630,7 @@ bool Editor::load_project(const QString& filename)
 
   update_tables();
 
+#ifdef HAS_IGNITION_PLUGIN
   if (project.has_sim_plugin())
   {
     printf("project has a sim plugin\n");
@@ -610,6 +642,7 @@ bool Editor::load_project(const QString& filename)
   }
   else
     printf("project does not have a sim plugin\n");
+#endif
 
   QSettings settings;
   settings.setValue(preferences_keys::previous_project_path, filename);
@@ -842,6 +875,8 @@ void Editor::mouse_event(const MouseType t, QMouseEvent* e)
     case TOOL_EDIT_POLYGON: mouse_edit_polygon(t, e, p); break;
     case TOOL_ADD_FIDUCIAL: mouse_add_fiducial(t, e, p); break;
     case TOOL_ADD_ROI:      mouse_add_roi(t, e, p); break;
+    case TOOL_ADD_HUMAN_LANE: mouse_add_human_lane(t, e, p); break;
+
     default: break;
   }
   previous_mouse_point = p;
@@ -972,6 +1007,7 @@ const QString Editor::tool_id_to_string(const int id)
     case TOOL_ADD_FLOOR: return "add &floor";
     case TOOL_ADD_HOLE: return "add hole";
     case TOOL_EDIT_POLYGON: return "&edit polygon";
+    case TOOL_ADD_HUMAN_LANE: return "add human lane";
     default: return "unknown tool ID";
   }
 }
@@ -1515,7 +1551,9 @@ void Editor::property_editor_cell_changed(int row, int column)
 bool Editor::create_scene()
 {
   scene->clear();  // destroys the mouse_motion_* items if they are there
+#ifdef HAS_IGNITION_PLUGIN
   project.clear_scene();  // forget all pointers to the graphics items
+#endif
   mouse_motion_line = nullptr;
   mouse_motion_model = nullptr;
   mouse_motion_ellipse = nullptr;
@@ -1779,11 +1817,13 @@ void Editor::mouse_add_edge(
     }
 
     if (edge_type != Edge::LANE)
+    {
       project.building.add_edge(
         level_idx,
         prev_clicked_idx,
         clicked_idx,
         edge_type);
+    }
     else
     {
       project.add_lane(
@@ -1832,6 +1872,12 @@ void Editor::mouse_add_door(
   const MouseType t, QMouseEvent* e, const QPointF& p)
 {
   mouse_add_edge(t, e, p, Edge::DOOR);
+}
+
+void Editor::mouse_add_human_lane(
+  const MouseType t, QMouseEvent* e, const QPointF& p)
+{
+  mouse_add_edge(t, e, p, Edge::HUMAN_LANE);
 }
 
 void Editor::mouse_add_model(
@@ -2257,15 +2303,19 @@ bool Editor::maybe_save()
 void Editor::showEvent(QShowEvent* event)
 {
   QMainWindow::showEvent(event);
+#ifdef HAS_IGNITION_PLUGIN
   sim_thread.start();
+#endif
 }
 
 void Editor::closeEvent(QCloseEvent* event)
 {
+#ifdef HAS_IGNITION_PLUGIN
   printf("waiting on sim_thread...\n");
   sim_thread.requestInterruption();
   sim_thread.quit();
   sim_thread.wait();
+#endif
 
   // save window geometry
   QSettings settings;
@@ -2337,8 +2387,12 @@ void Editor::set_mode(const EditorModeId _mode, const QString& mode_string)
   // scenario tools
   set_tool_visibility(TOOL_ADD_ROI, mode == MODE_SCENARIO);
 
+  // crowd_sim tools
+  set_tool_visibility(TOOL_ADD_HUMAN_LANE, mode == MODE_CROWD_SIM);
+
   // "multi-purpose" tools
-  set_tool_visibility(TOOL_EDIT_POLYGON, mode != MODE_TRAFFIC);
+  set_tool_visibility(TOOL_EDIT_POLYGON,
+    mode != MODE_TRAFFIC && mode != MODE_CROWD_SIM);
 }
 
 void Editor::update_tables()
@@ -2348,8 +2402,10 @@ void Editor::update_tables()
   lift_table->update(project.building);
   scenario_table->update(project);
   traffic_table->update(project);
+  crowd_sim_table->update();
 }
 
+#ifdef HAS_IGNITION_PLUGIN
 void Editor::sim_reset()
 {
   printf("TODO: sim_reset()\n");
@@ -2360,6 +2416,14 @@ void Editor::sim_play_pause()
 {
   printf("sim_play_pause()\n");
   project.sim_is_paused = !project.sim_is_paused;
+}
+
+void Editor::sim_tick()
+{
+  // called from sim thread
+
+  if (!project.sim_is_paused)
+    project.sim_tick();
 }
 
 #ifdef HAS_OPENCV
@@ -2400,12 +2464,6 @@ void Editor::record_frame_to_video()
 
   video_writer->write(mat_rgb_swap);
 }
-#endif
+#endif  // HAS_OPENCV
 
-void Editor::sim_tick()
-{
-  // called from sim thread
-
-  if (!project.sim_is_paused)
-    project.sim_tick();
-}
+#endif  // HAS_IGNITION_PLUGIN

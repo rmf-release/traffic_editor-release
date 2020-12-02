@@ -396,7 +396,7 @@ void Project::mouse_select_press(
       }
     }
   }
-  else if (mode == MODE_TRAFFIC)
+  else if (mode == MODE_TRAFFIC || mode == MODE_CROWD_SIM)
   {
     // todo: keep traffic-map vertices separate from building vertices
     // for now, they're using the same vertex list.
@@ -472,7 +472,17 @@ void Project::set_selected_line_item(
       if (edge.get_graph_idx() != traffic_map_idx)
         continue;
     }
-    if (mode == MODE_BUILDING && edge.type == Edge::LANE)
+
+    if (mode == MODE_CROWD_SIM)
+    {
+      if (edge.type != Edge::HUMAN_LANE)
+        continue;
+      if (edge.get_graph_idx() != traffic_map_idx)
+        continue;
+    }
+
+    if (mode == MODE_BUILDING &&
+      (edge.type == Edge::LANE || edge.type == Edge::HUMAN_LANE) )
       continue;
 
     // look up the line's vertices
@@ -612,6 +622,7 @@ void Project::clear()
   scenario_idx = -1;
 }
 
+#ifdef HAS_IGNITION_PLUGIN
 void Project::sim_tick()
 {
   if (scenario_idx < 0 || scenario_idx >= static_cast<int>(scenarios.size()))
@@ -625,13 +636,16 @@ void Project::sim_reset()
     return;
   scenarios[scenario_idx]->sim_reset(building);
 }
+#endif
 
 void Project::clear_scene()
 {
   building.clear_scene();
 
+#ifdef HAS_IGNITION_PLUGIN
   for (auto& scenario : scenarios)
     scenario->clear_scene();
+#endif
 }
 
 void Project::add_lane(
@@ -642,6 +656,7 @@ void Project::add_lane(
   building.add_lane(level_idx, start_idx, end_idx, traffic_map_idx);
 }
 
+#ifdef HAS_IGNITION_PLUGIN
 void Project::scenario_scene_update(
   QGraphicsScene* scene,
   const int level_idx)
@@ -660,6 +675,7 @@ bool Project::has_sim_plugin()
   }
   return false;
 }
+#endif
 
 bool Project::set_filename(const std::string& _fn)
 {

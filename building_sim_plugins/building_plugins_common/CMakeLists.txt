@@ -47,7 +47,6 @@ ament_target_dependencies(slotcar_common
     tf2_ros
 )
 
-
 target_include_directories(slotcar_common
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -116,11 +115,16 @@ if (menge_FOUND)
   )
 
   #crowd_simulation_common_install
-  ament_export_libraries(crowd_simulator_common)
+  if($ENV{ROS_DISTRO} STREQUAL foxy)
+    ament_export_targets(crowd_simulator_common HAS_LIBRARY_TARGET)
+  elseif($ENV{ROS_DISTRO} STREQUAL eloquent)
+    ament_export_interfaces(crowd_simulator_common HAS_LIBRARY_TARGET)
+  endif()
   install(
     TARGETS crowd_simulator_common
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    EXPORT crowd_simulator_common
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
   )
 else(NOT menge_FOUND)
   message("menge-cmake not found, skipping crowd_simulation plugins")

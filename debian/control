@@ -1,0 +1,12 @@
+Source: ros-rolling-building-ignition-plugins
+Section: misc
+Priority: optional
+Maintainer: Luca Della Vedova <luca@openrobotics.org>
+Build-Depends: debhelper (>= 9.0.0), ros-rolling-ament-cmake, ros-rolling-building-sim-common, ros-rolling-geometry-msgs, ros-rolling-rclcpp, ros-rolling-rmf-door-msgs, ros-rolling-rmf-fleet-msgs, ros-rolling-rmf-lift-msgs, ros-rolling-std-msgs, ros-rolling-std-srvs, ros-rolling-tf2-ros, ros-rolling-ros-workspace
+Homepage: 
+Standards-Version: 3.9.2
+
+Package: ros-rolling-building-ignition-plugins
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ros-rolling-building-sim-common, ros-rolling-geometry-msgs, ros-rolling-rclcpp, ros-rolling-rmf-door-msgs, ros-rolling-rmf-fleet-msgs, ros-rolling-rmf-lift-msgs, ros-rolling-std-msgs, ros-rolling-std-srvs, ros-rolling-tf2-ros, ros-rolling-ros-workspace
+Description: Ignition gazebo plugins for building infrastructure simulation

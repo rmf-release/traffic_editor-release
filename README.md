@@ -1,9 +1,24 @@
-# building\_map\_msgs
+![](https://github.com/osrf/traffic_editor/workflows/build/badge.svg)
+![](https://github.com/osrf/traffic_editor/workflows/style/badge.svg)
 
-`building_map_msgs` provides message and service types for communicating about building infrastructure.
+# traffic\_editor
 
-For more information about ROS 2 interfaces, see [index.ros2.org](https://index.ros.org/doc/ros2/Concepts/About-ROS-Interfaces/)
+Welcome!
 
-## Quality Declaration
+This repository has the following directories:
+ * `traffic_editor`: GUI for annotating floorplans to create traffic patterns
+ * `building_map_msgs`: messages that can carry these traffic plans
+ * `building_map_tools`: Python-based tools to use and manipulate the map files created by `traffic_editor`, such as:
+   * a ROS 2 node to serve maps using `building_map_msgs`
+   * translators to simulators such as Gazebo
+   * translators to navigation packages such as `rmf_core`
 
-This package claims to be in the **Quality Level 3** category. See the [Quality Declaration](QUALITY_DECLARATION.md) for more details.
+# Installation
+
+This repository is structed as a collection of ROS 2 packages and can be built using `colcon`.
+
+The `building_map_tools` package requires the following Python 3 dependencies to generate worlds:
+
+```
+sudo apt install python3-shapely python3-yaml python3-requests
+```

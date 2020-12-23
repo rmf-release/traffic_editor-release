@@ -1,0 +1,12 @@
+Source: ros-rolling-test-maps
+Section: misc
+Priority: optional
+Maintainer: Morgan Quigley <morgan@openrobotics.org>
+Build-Depends: debhelper (>= 9.0.0), ros-foxy-building-map-tools, ros-rolling-ament-cmake, ros-rolling-ros2run, ros-rolling-ros-workspace
+Homepage: 
+Standards-Version: 3.9.2
+
+Package: ros-rolling-test-maps
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ros-rolling-ros-workspace
+Description: Some test maps for traffic_editor and building_map_tools.

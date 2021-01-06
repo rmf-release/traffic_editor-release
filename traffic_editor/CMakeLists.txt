@@ -23,8 +23,8 @@ if(CMAKE_VERSION VERSION_LESS "3.7.0")
 endif()
 
 find_package(Qt5 COMPONENTS Widgets Concurrent REQUIRED)
-find_package(ignition-plugin1 REQUIRED COMPONENTS all)
-find_package(ignition-common3 REQUIRED)
+find_package(ignition-plugin1 QUIET COMPONENTS all)
+find_package(ignition-common3 QUIET)
 find_package(ament_index_cpp REQUIRED)
 
 # OpenCV is an optional dependency, only needed if you want to make videos
@@ -36,7 +36,20 @@ include_directories(gui)
 include_directories(include)
 include_directories(${ament_index_cpp_INCLUDE_DIRS})
 
-add_executable(traffic-editor
+set(traffic_editor_sources
+  gui/actions/add_edge.cpp
+  gui/actions/add_fiducial.cpp
+  gui/actions/add_model.cpp
+  gui/actions/add_polygon.cpp
+  gui/actions/add_property.cpp
+  gui/actions/add_vertex.cpp
+  gui/actions/delete.cpp
+  gui/actions/move_fiducial.cpp
+  gui/actions/move_model.cpp
+  gui/actions/move_vertex.cpp
+  gui/actions/polygon_remove_vertices.cpp
+  gui/actions/polygon_add_vertex.cpp
+  gui/actions/rotate_model.cpp
   gui/add_param_dialog.cpp
   gui/building.cpp
   gui/building_dialog.cpp
@@ -68,7 +81,6 @@ add_executable(traffic-editor
   gui/scenario_dialog.cpp
   gui/scenario_level.cpp
   gui/scenario_table.cpp
-  gui/sim_thread.cpp
   gui/table_list.cpp
   gui/traffic_table.cpp
   gui/traffic_map.cpp
@@ -76,18 +88,60 @@ add_executable(traffic-editor
   gui/vertex.cpp
   gui/yaml_utils.cpp
   resources/resource.qrc
+
+  #crowd_sim related
+  gui/multi_select_combo_box.cpp
+  gui/crowd_sim/agent_group.cpp
+  gui/crowd_sim/agent_group_table.cpp
+  gui/crowd_sim/agent_profile.cpp
+  gui/crowd_sim/agent_profile_table.cpp
+  gui/crowd_sim/condition.cpp
+  gui/crowd_sim/condition_dialog.cpp
+  gui/crowd_sim/crowd_sim_dialog.cpp
+  gui/crowd_sim/crowd_sim_editor_table.cpp
+  gui/crowd_sim/crowd_sim_impl.cpp
+  gui/crowd_sim/crowd_sim_table_base.cpp
+  gui/crowd_sim/goal_set.cpp
+  gui/crowd_sim/goal_set_table.cpp
+  gui/crowd_sim/model_type.cpp
+  gui/crowd_sim/model_type_table.cpp
+  gui/crowd_sim/state.cpp
+  gui/crowd_sim/state_table.cpp
+  gui/crowd_sim/to_state_dialog.cpp
+  gui/crowd_sim/to_state_table.cpp
+  gui/crowd_sim/transition.cpp
+  gui/crowd_sim/transition_table.cpp
 )
 
-target_link_libraries(traffic-editor
+set(traffic_editor_libs
   Qt5::Widgets
   Qt5::Concurrent
-  ignition-plugin1::core
-  ignition-plugin1::loader
-  ignition-common3::core
   yaml-cpp
   ${ament_index_cpp_LIBRARIES}
   ${OpenCV_LIBS}
 )
+
+if (ignition-plugin1_VERSION)
+  set(traffic_editor_sources
+    ${traffic_editor_sources}
+    gui/sim_thread.cpp
+  )
+  set(traffic_editor_libs
+    ${traffic_editor_libs}
+    ignition-plugin1::core
+    ignition-plugin1::loader
+    ignition-common3::core
+  )
+endif()
+
+add_executable(traffic-editor ${traffic_editor_sources})
+target_link_libraries(traffic-editor ${traffic_editor_libs})
+
+if (ignition-plugin1_VERSION)
+  # sadly this if() block has to come after add_executable(), but
+  # the if() block determining the sources has to go before add_executable()
+  target_compile_definitions(traffic-editor PUBLIC "HAS_IGNITION_PLUGIN")
+endif()
 
 if (OpenCV_VERSION)
   target_compile_definitions(traffic-editor PUBLIC "HAS_OPENCV")

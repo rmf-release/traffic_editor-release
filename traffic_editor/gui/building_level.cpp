@@ -98,7 +98,6 @@ bool BuildingLevel::from_yaml(
   load_yaml_edge_sequence(_data, "walls", Edge::WALL);
   load_yaml_edge_sequence(_data, "measurements", Edge::MEAS);
   load_yaml_edge_sequence(_data, "doors", Edge::DOOR);
-  load_yaml_edge_sequence(_data, "human_lanes", Edge::HUMAN_LANE);
 
   if (_data["models"] && _data["models"].IsSequence())
   {
@@ -220,9 +219,6 @@ YAML::Node BuildingLevel::to_yaml() const
       case Edge::DOOR:
         dict_name = "doors";
         break;
-      case Edge::HUMAN_LANE:
-        dict_name = "human_lanes";
-        break;
       default:
         printf("tried to save unknown edge type: %d\n",
           static_cast<int>(edge.type));
@@ -256,41 +252,6 @@ YAML::Node BuildingLevel::to_yaml() const
     y["layers"][layer.name] = layer.to_yaml();
 
   return y;
-}
-
-bool BuildingLevel::can_delete_current_selection()
-{
-  int selected_vertex_idx = -1;
-  for (int i = 0; i < static_cast<int>(vertices.size()); i++)
-  {
-    if (vertices[i].selected)
-    {
-      selected_vertex_idx = i;
-      break;  // just grab the index of the first selected vertex
-    }
-  }
-
-  if (selected_vertex_idx < 0)
-    return true;
-
-  bool vertex_used = false;
-  for (const auto& edge : edges)
-  {
-    if (edge.start_idx == selected_vertex_idx ||
-      edge.end_idx == selected_vertex_idx)
-      vertex_used = true;
-  }
-  for (const auto& polygon : polygons)
-  {
-    for (const int& vertex_idx : polygon.vertices)
-    {
-      if (vertex_idx == selected_vertex_idx)
-        vertex_used = true;
-    }
-  }
-  if (vertex_used)
-    return false;// don't try to delete a vertex used in a shape
-  return true;
 }
 
 bool BuildingLevel::delete_selected()
@@ -383,60 +344,6 @@ bool BuildingLevel::delete_selected()
   return true;
 }
 
-void BuildingLevel::get_selected_items(
-  std::vector<BuildingLevel::SelectedItem>& items)
-{
-  for (size_t i = 0; i < edges.size(); i++)
-  {
-    if (edges[i].selected)
-    {
-      BuildingLevel::SelectedItem item;
-      item.edge_idx = i;
-      items.push_back(item);
-    }
-  }
-
-  for (size_t i = 0; i < models.size(); i++)
-  {
-    if (models[i].selected)
-    {
-      BuildingLevel::SelectedItem item;
-      item.model_idx = i;
-      items.push_back(item);
-    }
-  }
-
-  for (size_t i = 0; i < vertices.size(); i++)
-  {
-    if (vertices[i].selected)
-    {
-      BuildingLevel::SelectedItem item;
-      item.vertex_idx = i;
-      items.push_back(item);
-    }
-  }
-
-  for (size_t i = 0; i < fiducials.size(); i++)
-  {
-    if (fiducials[i].selected)
-    {
-      BuildingLevel::SelectedItem item;
-      item.fiducial_idx = i;
-      items.push_back(item);
-    }
-  }
-
-  for (size_t i = 0; i < polygons.size(); i++)
-  {
-    if (polygons[i].selected)
-    {
-      BuildingLevel::SelectedItem item;
-      item.polygon_idx = i;
-      items.push_back(item);
-    }
-  }
-}
-
 void BuildingLevel::calculate_scale()
 {
   // for now, just calculate the mean of the scale estimates
@@ -492,8 +399,7 @@ void BuildingLevel::draw_lane(
   const double dy = v_end.y - v_start.y;
   const double len = std::sqrt(dx*dx + dy*dy);
 
-  double pen_width_in_meters = edge.get_width() > 0 ? edge.get_width() : 1.0;
-  const double lane_pen_width = pen_width_in_meters / drawing_meters_per_pixel;
+  const double lane_pen_width = 1.0 / drawing_meters_per_pixel;
 
   const QPen arrow_pen(
     QBrush(QColor::fromRgbF(0.0, 0.0, 0.0, 0.5)),
@@ -541,7 +447,6 @@ void BuildingLevel::draw_lane(
     case 3: color.setRgbF(0.5, 0.5, 0.0); break;
     case 4: color.setRgbF(0.5, 0.0, 0.5); break;
     case 5: color.setRgbF(0.8, 0.0, 0.0); break;
-    case 9: color.setRgbF(0.3, 0.3, 0.3); break;
     default: break;  // will render as dark grey
   }
 
@@ -968,7 +873,6 @@ void BuildingLevel::draw(
       case Edge::WALL: draw_wall(scene, edge); break;
       case Edge::MEAS: draw_meas(scene, edge); break;
       case Edge::DOOR: draw_door(scene, edge); break;
-      case Edge::HUMAN_LANE: draw_lane(scene, edge, rendering_options); break;
       default:
         printf("tried to draw unknown edge type: %d\n",
           static_cast<int>(edge.type));

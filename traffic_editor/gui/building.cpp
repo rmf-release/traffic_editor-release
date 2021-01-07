@@ -83,21 +83,6 @@ bool Building::load_yaml_file()
   if (y["reference_level_name"])
     reference_level_name = y["reference_level_name"].as<string>();
 
-  // crowd_sim_impl is initialized when creating crowd_sim_table in editor.cpp
-  // just in case the pointer is not initialized
-  if (crowd_sim_impl == nullptr)
-    crowd_sim_impl = std::make_shared<crowd_sim::CrowdSimImplementation>();
-  if (y["crowd_sim"] && y["crowd_sim"].IsMap())
-  {
-    if (!crowd_sim_impl->from_yaml(y["crowd_sim"]))
-    {
-      printf(
-        "Error in loading crowd_sim configuration from yaml, re-initialize crowd_sim");
-      crowd_sim_impl->clear();
-      crowd_sim_impl->init_default_configure();
-    }
-  }
-
   if (!y["levels"] || !y["levels"].IsMap())
   {
     printf("expected top-level dictionary named 'levels'");
@@ -156,9 +141,6 @@ bool Building::save_yaml_file()
   for (const auto& lift : lifts)
     y["lifts"][lift.name] = lift.to_yaml();
 
-  if (crowd_sim_impl == nullptr)
-    y["crowd_sim"] = crowd_sim_impl->to_yaml();
-
   YAML::Emitter emitter;
   yaml_utils::write_node(y, emitter);
   std::ofstream fout(filename);
@@ -174,12 +156,11 @@ void Building::add_vertex(int level_index, double x, double y)
   levels[level_index].add_vertex(x, y);
 }
 
-QUuid Building::add_fiducial(int level_index, double x, double y)
+void Building::add_fiducial(int level_index, double x, double y)
 {
   if (level_index >= static_cast<int>(levels.size()))
-    return NULL;
+    return;
   levels[level_index].fiducials.push_back(Fiducial(x, y));
-  return levels[level_index].fiducials.rbegin()->uuid;
 }
 
 int Building::find_nearest_vertex_index(
@@ -370,7 +351,7 @@ bool Building::delete_selected(const int level_index)
   return true;
 }
 
-QUuid Building::add_model(
+void Building::add_model(
   const int level_idx,
   const double x,
   const double y,
@@ -379,7 +360,7 @@ QUuid Building::add_model(
   const std::string& model_name)
 {
   if (level_idx >= static_cast<int>(levels.size()))
-    return NULL;
+    return;
 
   printf("Building::add_model(%d, %.1f, %.1f, %.1f, %.2f, %s)\n",
     level_idx, x, y, z, yaw, model_name.c_str());
@@ -392,7 +373,6 @@ QUuid Building::add_model(
   m.instance_name = model_name;  // todo: add unique numeric suffix?
   m.is_static = true;
   levels[level_idx].models.push_back(m);
-  return levels[level_idx].models.rbegin()->uuid;
 }
 
 void Building::set_model_yaw(

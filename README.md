@@ -1,3 +1,33 @@
+## traffic_editor (rolling) - 1.2.0-3
+
+The packages in the `traffic_editor` repository were released into the `rolling` distro by running `/usr/local/bin/bloom-release --rosdistro rolling --track 21.01 traffic_editor` on `Thu, 07 Jan 2021 09:17:48 -0000`
+
+These packages were released:
+- `building_gazebo_plugins`
+- `building_ignition_plugins`
+- `building_map_msgs`
+- `building_map_tools`
+- `building_sim_common`
+- `test_maps`
+- `traffic_editor`
+
+Version of package(s) in repository `traffic_editor`:
+
+- upstream repository: https://github.com/osrf/traffic_editor.git
+- release repository: https://github.com/rmf-release/traffic_editor-release.git
+- rosdistro version: `1.9999.0-8`
+- old version: `1.2.0-2`
+- new version: `1.2.0-3`
+
+Versions of tools used:
+
+- bloom version: `0.10.0`
+- catkin_pkg version: `0.4.23`
+- rosdep version: `0.20.0`
+- rosdistro version: `0.8.3`
+- vcstools version: `0.1.42`
+
+
 ## traffic_editor (rolling) - 1.2.0-2
 
 The packages in the `traffic_editor` repository were released into the `rolling` distro by running `/usr/local/bin/bloom-release --rosdistro rolling --track 21.01 traffic_editor` on `Thu, 07 Jan 2021 08:48:28 -0000`

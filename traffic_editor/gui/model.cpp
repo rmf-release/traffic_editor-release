@@ -37,7 +37,6 @@ bool iequals(const string& a, const string& b)
 
 Model::Model()
 {
-  uuid = QUuid::createUuid();
 }
 
 void Model::from_yaml(const YAML::Node& data, const string& level_name)

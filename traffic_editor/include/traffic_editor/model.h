@@ -32,7 +32,6 @@
 #include <algorithm>
 #include <yaml-cpp/yaml.h>
 #include <QGraphicsScene>
-#include <QUuid>
 
 class Building;
 class QGraphicsPixmapItem;
@@ -51,7 +50,6 @@ public:
   bool error_printed = false;
   std::string starting_level;  // used when resetting a test scenario
   QGraphicsPixmapItem* pixmap_item = nullptr;
-  QUuid uuid;
 
   Model();
 

@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 project(building_ignition_plugins)
 
+set (CMAKE_AUTOMOC ON)
+
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 99)
@@ -10,7 +12,6 @@ endif()
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
 endif()
-
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -38,8 +39,14 @@ set(IGN_PLUGIN_VER 1)
 ign_find_package(ignition-common3 REQUIRED)
 set(IGN_COMMON_VER 3)
 ign_find_package(ignition-math6 REQUIRED)
-ign_find_package(sdformat10 REQUIRED)
 set(IGN_MATH_VER 6)
+ign_find_package(ignition-gui4 REQUIRED)
+set(IGN_GUI_VER 4)
+ign_find_package(ignition-msgs6 REQUIRED)
+set(IGN_MSGS_VER 6)
+ign_find_package(ignition-transport9 REQUIRED)
+set(IGN_TRANSPORT_VER 9)
+ign_find_package(sdformat10 REQUIRED)
 
 find_package(tf2_ros REQUIRED)
 find_package(geometry_msgs REQUIRED)
@@ -50,21 +57,28 @@ find_package(rmf_door_msgs REQUIRED)
 find_package(rmf_lift_msgs REQUIRED)
 find_package(building_map_msgs REQUIRED)
 find_package(building_sim_common REQUIRED)
+find_package (Qt5
+  COMPONENTS
+    Core
+    Qml
+    Quick
+  REQUIRED
+)
 find_package(menge QUIET)
 
 include(GNUInstallDirs)
 
 add_library(slotcar SHARED ${PROJECT_SOURCE_DIR}/src/slotcar.cpp)
 
-target_link_libraries(slotcar
+ament_target_dependencies(slotcar
   PUBLIC
-    ignition-gazebo${IGN_GAZEBO_VER}::ignition-gazebo${IGN_GAZEBO_VER}
-    ignition-plugin${IGN_PLUGIN_VER}::ignition-plugin${IGN_PLUGIN_VER}
-    ${building_sim_common_LIBRARIES}
-    ${rmf_fleet_msgs_LIBRARIES}
-    ${rclcpp_LIBRARIES}
-    ${geometry_msgs_LIBRARIES}
-    ${tf2_ros_LIBRARIES}
+    ignition-gazebo${IGN_GAZEBO_VER}
+    ignition-plugin${IGN_PLUGIN_VER}
+    building_sim_common
+    rmf_fleet_msgs
+    rclcpp
+    geometry_msgs
+    tf2_ros
 )
 
 target_include_directories(slotcar
@@ -92,16 +106,14 @@ target_include_directories(door
     ${rmf_door_msgs_INCLUDE_DIRS}
 )
 
-target_link_libraries(door
+ament_target_dependencies(door
   PUBLIC
-    ${rclcpp_LIBRARIES}
-    ignition-gazebo${IGN_GAZEBO_VER}::ignition-gazebo${IGN_GAZEBO_VER}
-    ignition-plugin${IGN_PLUGIN_VER}::ignition-plugin${IGN_PLUGIN_VER}
-    ${building_sim_common_LIBRARIES}
-    ${rmf_door_msgs_LIBRARIES}
-    ${rmf_fleet_msgs_LIBRARIES}
-    #${geometry_msgs_LIBRARIES}
-    #${tf2_ros_LIBRARIES}
+    rclcpp
+    ignition-gazebo${IGN_GAZEBO_VER}
+    ignition-plugin${IGN_PLUGIN_VER}
+    building_sim_common
+    rmf_door_msgs
+    rmf_fleet_msgs
 )
 
 ###############################
@@ -118,29 +130,27 @@ target_include_directories(lift
     ${rmf_lift_msgs_INCLUDE_DIRS}
 )
 
-target_link_libraries(lift
+ament_target_dependencies(lift
   PUBLIC
-    ${rclcpp_LIBRARIES}
-    ignition-gazebo${IGN_GAZEBO_VER}::ignition-gazebo${IGN_GAZEBO_VER}
-    ignition-plugin${IGN_PLUGIN_VER}::ignition-plugin${IGN_PLUGIN_VER}
-    ${building_sim_common_LIBRARIES}
-    ${rmf_door_msgs_LIBRARIES}
-    ${rmf_lift_msgs_LIBRARIES}
-    ${rmf_fleet_msgs_LIBRARIES}
-    #${geometry_msgs_LIBRARIES}
-    #${tf2_ros_LIBRARIES}
+    rclcpp
+    ignition-gazebo${IGN_GAZEBO_VER}
+    ignition-plugin${IGN_PLUGIN_VER}
+    building_sim_common
+    rmf_door_msgs
+    rmf_lift_msgs
+    rmf_fleet_msgs
 )
 
 ###############################
 # crowd simulator stuff
 ###############################
 if (menge_FOUND)
-  add_library(crowd_simulator_ign
+  add_library(crowd_simulator
     SHARED
     src/crowd_simulator.cpp
   )
 
-  target_include_directories(crowd_simulator_ign
+  target_include_directories(crowd_simulator
     PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     ${building_sim_common_INCLUDE_DIRS}
@@ -149,7 +159,7 @@ if (menge_FOUND)
     ${IGNITION-COMMON_INCLUDE_DIRS}
   )
 
-  ament_target_dependencies(crowd_simulator_ign
+  ament_target_dependencies(crowd_simulator
     ignition-gazebo${IGN_GAZEBO_VER}
     ignition-plugin${IGN_PLUGIN_VER}
     rclcpp
@@ -159,7 +169,7 @@ if (menge_FOUND)
 
   #install
   install(
-    TARGETS crowd_simulator_ign
+    TARGETS crowd_simulator
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   )
@@ -168,11 +178,39 @@ else (NOT menge_FOUND)
 endif()
 
 ###############################
+# toggle charging
+###############################
+
+QT5_ADD_RESOURCES(resources_RCC src/toggle_charging/toggle_charging.qrc)
+
+add_library(toggle_charging SHARED ${headers_MOC}
+  src/toggle_charging/toggle_charging.cpp
+  ${resources_RCC}
+)
+
+ament_target_dependencies(toggle_charging
+  ignition-gui${IGN_GUI_VER}
+  ignition-msgs${IGN_MSGS_VER}
+  ignition-transport${IGN_TRANSPORT_VER}
+  Qt5Core
+  Qt5Qml
+  Qt5Quick
+  rclcpp
+)
+
+target_include_directories(toggle_charging
+  PUBLIC
+  ${Qt5Core_INCLUDE_DIRS}
+  ${Qt5Qml_INCLUDE_DIRS}
+  ${Qt5Quick_INCLUDE_DIRS}
+)
+
+###############################
 # install stuff
 ###############################
 
 install(
-  TARGETS slotcar door lift
+  TARGETS slotcar door lift toggle_charging
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )

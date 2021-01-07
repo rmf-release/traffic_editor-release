@@ -41,6 +41,15 @@
 #include "ament_index_cpp/get_package_prefix.hpp"
 #include "ament_index_cpp/get_resource.hpp"
 
+#include "actions/add_fiducial.h"
+#include "actions/add_model.h"
+#include "actions/add_property.h"
+#include "actions/add_polygon.h"
+#include "actions/add_vertex.h"
+#include "actions/delete.h"
+#include "actions/polygon_add_vertex.h"
+#include "actions/polygon_remove_vertices.h"
+
 #include "add_param_dialog.h"
 #include "building_dialog.h"
 #include "building_level_dialog.h"
@@ -56,6 +65,7 @@
 #include "scenario_table.h"
 #include "traffic_table.h"
 #include "ui_transform_dialog.h"
+
 
 using std::string;
 using std::isnan;
@@ -164,13 +174,26 @@ Editor::Editor()
       create_scene();
     });
 
+  crowd_sim_table = new CrowdSimEditorTable(project);
+  connect(
+    crowd_sim_table,
+    &QTableWidget::cellClicked,
+    [&]()
+    {
+      crowd_sim_table->update();
+      create_scene();
+    }
+  );
+
+
   right_tab_widget = new QTabWidget;
-  right_tab_widget->setStyleSheet("QTabBar::tab { color: white; }");
+  right_tab_widget->setStyleSheet("QTabBar::tab { color: black; }");
   right_tab_widget->addTab(level_table, "levels");
   right_tab_widget->addTab(layers_table, "layers");
   right_tab_widget->addTab(lift_table, "lifts");
   right_tab_widget->addTab(traffic_table, "traffic");
   right_tab_widget->addTab(scenario_table, "scenarios");
+  right_tab_widget->addTab(crowd_sim_table, "crowd_sim");
 
   property_editor = new QTableWidget;
   property_editor->setStyleSheet(
@@ -264,6 +287,17 @@ Editor::Editor()
   // EDIT MENU
   QMenu* edit_menu = menuBar()->addMenu("&Edit");
   edit_menu->addAction(
+    "&Undo",
+    this,
+    &Editor::edit_undo,
+    QKeySequence::Undo);
+  edit_menu->addAction(
+    "&Redo",
+    this,
+    &Editor::edit_redo,
+    QKeySequence::Redo);
+  edit_menu->addSeparator();
+  edit_menu->addAction(
     "&Building properties...",
     this,
     &Editor::edit_building_properties);
@@ -299,6 +333,12 @@ Editor::Editor()
     [this]() { this->set_mode(MODE_SCENARIO, "Scenario"); },
     QKeySequence(Qt::CTRL + Qt::Key_E));
 
+  mode_menu->addAction(
+    "&Crowd Simulation",
+    this,
+    [this]() { this->set_mode(MODE_CROWD_SIM, "CrowdSim"); },
+    QKeySequence(Qt::CTRL + Qt::Key_C));
+
   // VIEW MENU
   QMenu* view_menu = menuBar()->addMenu("&View");
   view_models_action =
@@ -324,6 +364,7 @@ Editor::Editor()
   mode_combo_box->addItem("Building");
   mode_combo_box->addItem("Traffic");
   mode_combo_box->addItem("Scenario");
+  mode_combo_box->addItem("Crowd_Sim");
   connect(
     mode_combo_box,
     &QComboBox::currentTextChanged,
@@ -335,6 +376,8 @@ Editor::Editor()
         set_mode(MODE_TRAFFIC, "Traffic");
       else if (text == "Scenario")
         set_mode(MODE_SCENARIO, "Scenario");
+      else if (text == "Crowd_Sim")
+        set_mode(MODE_CROWD_SIM, "CrowdSim");
     });
 
   QLabel* mode_label = new QLabel("Edit mode:");
@@ -362,6 +405,7 @@ Editor::Editor()
   create_tool_button(TOOL_ADD_HOLE, ":icons/hole.svg", "Add hole polygon");
   create_tool_button(TOOL_ADD_ROI, ":icons/roi.svg", "Add region of interest");
   create_tool_button(TOOL_EDIT_POLYGON, "", "Edit Polygon");
+  create_tool_button(TOOL_ADD_HUMAN_LANE, "", "Add Human Lane with width");
 
   connect(
     tool_button_group,
@@ -370,6 +414,7 @@ Editor::Editor()
 
   toolbar->addSeparator();
 
+#ifdef HAS_IGNITION_PLUGIN
   sim_reset_action = toolbar->addAction(
     "Reset",
     this,
@@ -388,7 +433,9 @@ Editor::Editor()
     this,
     &Editor::record_start_stop);
   record_start_stop_action->setVisible(false);
-#endif
+#endif  // HAS_OPENCV
+
+#endif  // HAS_IGNITION_PLUGIN
 
   toolbar->setStyleSheet(
     "QToolBar {background-color: #404040; border: none; spacing: 5px} QToolButton {background-color: #c0c0c0; color: blue; border: 1px solid black;} QToolButton:checked {background-color: #808080; color: red; border: 1px solid black;}");
@@ -426,6 +473,7 @@ Editor::Editor()
   load_model_names();
   level_table->setCurrentCell(level_idx, 0);
 
+#ifdef HAS_IGNITION_PLUGIN
   scene_update_timer = new QTimer;
   connect(
     scene_update_timer,
@@ -433,11 +481,12 @@ Editor::Editor()
     this,
     &Editor::scene_update_timer_timeout);
   scene_update_timer->start(1000 / 30);
+#endif
 }
 
 Editor::~Editor()
 {
-#ifdef HAS_OPENCV
+#if defined(HAS_OPENCV) && defined(HAS_IGNITION_PLUGIN)
   if (video_writer)
   {
     delete video_writer;
@@ -446,6 +495,7 @@ Editor::~Editor()
 #endif
 }
 
+#ifdef HAS_IGNITION_PLUGIN
 void Editor::scene_update_timer_timeout()
 {
   if (project.building.levels.empty())
@@ -484,8 +534,9 @@ void Editor::scene_update_timer_timeout()
 
 #ifdef HAS_OPENCV
   record_frame_to_video();
-#endif
+#endif  // HAS_OPENCV
 }
+#endif  // HAS_IGNITION_PLUGIN
 
 void Editor::load_model_names()
 {
@@ -599,6 +650,7 @@ bool Editor::load_project(const QString& filename)
 
   update_tables();
 
+#ifdef HAS_IGNITION_PLUGIN
   if (project.has_sim_plugin())
   {
     printf("project has a sim plugin\n");
@@ -610,6 +662,7 @@ bool Editor::load_project(const QString& filename)
   }
   else
     printf("project does not have a sim plugin\n");
+#endif
 
   QSettings settings;
   settings.setValue(preferences_keys::previous_project_path, filename);
@@ -746,6 +799,28 @@ void Editor::help_about()
   QMessageBox::about(this, "About", "Welcome to the Traffic Editor");
 }
 
+void Editor::edit_undo()
+{
+  undo_stack.undo();
+  if (
+    tool_id == TOOL_ADD_LANE
+    || tool_id == TOOL_ADD_WALL)
+  {
+    clicked_idx = -1;
+    prev_clicked_idx = -1;
+  }
+  create_scene();
+  update_property_editor();
+  setWindowModified(true);
+}
+
+void Editor::edit_redo()
+{
+  undo_stack.redo();
+  create_scene();
+  setWindowModified(true);
+}
+
 void Editor::edit_preferences()
 {
   PreferencesDialog preferences_dialog(this);
@@ -842,6 +917,8 @@ void Editor::mouse_event(const MouseType t, QMouseEvent* e)
     case TOOL_EDIT_POLYGON: mouse_edit_polygon(t, e, p); break;
     case TOOL_ADD_FIDUCIAL: mouse_add_fiducial(t, e, p); break;
     case TOOL_ADD_ROI:      mouse_add_roi(t, e, p); break;
+    case TOOL_ADD_HUMAN_LANE: mouse_add_human_lane(t, e, p); break;
+
     default: break;
   }
   previous_mouse_point = p;
@@ -879,10 +956,10 @@ void Editor::keyPressEvent(QKeyEvent* e)
   switch (e->key())
   {
     case Qt::Key_Delete:
-      if (project.delete_selected(level_idx))
+      if (project.can_delete_current_selection(level_idx))
       {
-        clear_property_editor();
-        setWindowModified(true);
+        undo_stack.push(new DeleteCommand(&project, level_idx));
+        create_scene();
       }
       else
       {
@@ -893,22 +970,25 @@ void Editor::keyPressEvent(QKeyEvent* e)
 
         project.clear_selection(level_idx);
       }
-      create_scene();
       break;
     case Qt::Key_S:
     case Qt::Key_Escape:
       tool_button_group->button(TOOL_SELECT)->click();
       project.clear_selection(level_idx);
+      clear_current_tool_buffer();
       update_property_editor();
       create_scene();
       break;
     case Qt::Key_V:
+      clear_current_tool_buffer();
       tool_button_group->button(TOOL_ADD_VERTEX)->click();
       break;
     case Qt::Key_M:
+      clear_current_tool_buffer();
       tool_button_group->button(TOOL_MOVE)->click();
       break;
     case Qt::Key_L:
+      clear_current_tool_buffer();
       tool_button_group->button(TOOL_ADD_LANE)->click();
       break;
     case Qt::Key_W:
@@ -972,6 +1052,7 @@ const QString Editor::tool_id_to_string(const int id)
     case TOOL_ADD_FLOOR: return "add &floor";
     case TOOL_ADD_HOLE: return "add hole";
     case TOOL_EDIT_POLYGON: return "&edit polygon";
+    case TOOL_ADD_HUMAN_LANE: return "add human lane";
     default: return "unknown tool ID";
   }
 }
@@ -1177,16 +1258,18 @@ void Editor::add_param_button_clicked()
     if (dialog.exec() != QDialog::Accepted)
       return;
 
-    for (auto& v : project.building.levels[level_idx].vertices)
-    {
-      if (v.selected)
-      {
-        v.params[dialog.get_param_name()] = Param(dialog.get_param_type());
-        populate_property_editor(v);
-        setWindowModified(true);
-        return;  // stop after finding the first one
-      }
-    }
+    AddPropertyCommand* cmd = new AddPropertyCommand(
+      &project,
+      dialog.get_param_name(),
+      Param(dialog.get_param_type()),
+      level_idx
+    );
+
+    undo_stack.push(cmd);
+    auto updated_id = cmd->get_vertex_updated();
+    populate_property_editor(
+      project.building.levels[level_idx].vertices[updated_id]);
+    setWindowModified(true);
   }
 }
 
@@ -1515,7 +1598,9 @@ void Editor::property_editor_cell_changed(int row, int column)
 bool Editor::create_scene()
 {
   scene->clear();  // destroys the mouse_motion_* items if they are there
+#ifdef HAS_IGNITION_PLUGIN
   project.clear_scene();  // forget all pointers to the graphics items
+#endif
   mouse_motion_line = nullptr;
   mouse_motion_model = nullptr;
   mouse_motion_ellipse = nullptr;
@@ -1620,9 +1705,7 @@ void Editor::mouse_add_vertex(
 {
   if (t == MOUSE_PRESS)
   {
-    if (mode == MODE_BUILDING || mode == MODE_TRAFFIC)
-      project.building.add_vertex(level_idx, p.x(), p.y());
-    else if (mode == MODE_SCENARIO)
+    if (mode == MODE_SCENARIO)
     {
       if (project.scenario_idx < 0)
       {
@@ -1632,8 +1715,13 @@ void Editor::mouse_add_vertex(
           "No scenario currently defined.");
         return;
       }
-      project.add_scenario_vertex(level_idx, p.x(), p.y());
     }
+
+    AddVertexCommand* command = new AddVertexCommand(&project, mode, level_idx,
+        p.x(), p.y());
+
+    undo_stack.push(command);
+
     setWindowModified(true);
     create_scene();
   }
@@ -1644,7 +1732,12 @@ void Editor::mouse_add_fiducial(
 {
   if (t == MOUSE_PRESS)
   {
-    project.building.add_fiducial(level_idx, p.x(), p.y());
+    AddFiducialCommand* command = new AddFiducialCommand(
+      &project,
+      level_idx,
+      p.x(),
+      p.y());
+    undo_stack.push(command);
     setWindowModified(true);
     create_scene();
   }
@@ -1670,20 +1763,65 @@ void Editor::mouse_move(
       mouse_motion_model = get_closest_pixmap_item(
         QPointF(model.state.x, model.state.y));
       mouse_model_idx = ni.model_idx;
+      latest_move_model = new MoveModelCommand(&project, level_idx,
+          mouse_model_idx);
     }
     else if (ni.vertex_idx >= 0 && ni.vertex_dist < 10.0)
     {
       mouse_vertex_idx = ni.vertex_idx;
+
+      latest_move_vertex = new MoveVertexCommand(&project, level_idx,
+          mouse_vertex_idx);
       // todo: save the QGrahpicsEllipse or group, to avoid full repaints?
     }
     else if (ni.fiducial_idx >= 0 && ni.fiducial_dist < 10.0)
     {
       mouse_fiducial_idx = ni.fiducial_idx;
+      latest_move_fiducial = new MoveFiducialCommand(&project, level_idx,
+          mouse_fiducial_idx);
       // todo: save the QGrahpicsEllipse or group, to avoid full repaints?
     }
   }
   else if (t == MOUSE_RELEASE)
   {
+    if (mouse_vertex_idx >= 0) //Add mouse move vertex.
+    {
+      if (latest_move_vertex->has_moved)
+      {
+        undo_stack.push(latest_move_vertex);
+      }
+      else
+      {
+        delete latest_move_vertex;
+        latest_move_vertex = NULL;
+      }
+    }
+
+    if (mouse_model_idx >= 0) //Add mouse move model
+    {
+      if (latest_move_model->has_moved)
+      {
+        undo_stack.push(latest_move_model);
+      }
+      else
+      {
+        delete latest_move_model;
+        latest_move_model = NULL;
+      }
+    }
+
+    if (mouse_fiducial_idx >= 0) //Add mouse move fiducial
+    {
+      if (latest_move_fiducial->has_moved)
+      {
+        undo_stack.push(latest_move_fiducial);
+      }
+      else
+      {
+        delete latest_move_fiducial;
+        latest_move_fiducial = NULL;
+      }
+    }
     mouse_vertex_idx = -1;
     mouse_fiducial_idx = -1;
     create_scene();  // this will free mouse_motion_model
@@ -1705,6 +1843,7 @@ void Editor::mouse_move(
       model.state.x = p.x();
       model.state.y = p.y();
       mouse_motion_model->setPos(p);
+      latest_move_model->set_final_destination(p.x(), p.y());
     }
     else if (mouse_vertex_idx >= 0)
     {
@@ -1713,6 +1852,7 @@ void Editor::mouse_move(
         project.building.levels[level_idx].vertices[mouse_vertex_idx];
       pt.x = p.x();
       pt.y = p.y();
+      latest_move_vertex->set_final_destination(p.x(), p.y());
       create_scene();
     }
     else if (mouse_fiducial_idx >= 0)
@@ -1721,6 +1861,7 @@ void Editor::mouse_move(
         project.building.levels[level_idx].fiducials[mouse_fiducial_idx];
       f.x = p.x();
       f.y = p.y();
+      latest_move_fiducial->set_final_destination(p.x(), p.y());
       printf("moved fiducial %d to (%.1f, %.1f)\n",
         mouse_fiducial_idx,
         f.x,
@@ -1750,54 +1891,52 @@ void Editor::mouse_add_edge(
     {
       // right button means "exit edge drawing mode please"
       clicked_idx = -1;
+      prev_clicked_idx = -1;
+      if (latest_add_edge != NULL)
+      {
+        //Need to check if new vertex was added.
+        delete latest_add_edge;
+        latest_add_edge = NULL;
+      }
       remove_mouse_motion_item();
       return;
     }
 
-    const int prev_clicked_idx = clicked_idx;
-    clicked_idx = project.building.nearest_item_index_if_within_distance(
-      level_idx, p_aligned.x(), p_aligned.y(), 10.0, Building::VERTEX);
-
-    if (clicked_idx < 0)
+    if (prev_clicked_idx < 0)
     {
-      // current click is not on an existing vertex. Add one.
-      project.building.add_vertex(level_idx, p_aligned.x(), p_aligned.y());
-
-      // set the new vertex as "clicked_idx"  todo: encapsulate better
-      clicked_idx =
-        static_cast<int>(
-        project.building.levels[level_idx].vertices.size() - 1);
+      latest_add_edge = new AddEdgeCommand(&project, level_idx);
+      clicked_idx = latest_add_edge->set_first_point(p_aligned.x(),
+          p_aligned.y());
+      latest_add_edge->set_edge_type(edge_type);
+      prev_clicked_idx = clicked_idx;
+      create_scene();
+      setWindowModified(true);
+      return; // no previous vertex click happened; nothing else to do
     }
 
-    if (prev_clicked_idx < 0)
-      return;// no previous vertex click happened; nothing else to do
+    clicked_idx =
+      latest_add_edge->set_second_point(p_aligned.x(), p_aligned.y());
 
     if (clicked_idx == prev_clicked_idx)  // don't create self edge loops
     {
       remove_mouse_motion_item();
       return;
     }
-
-    if (edge_type != Edge::LANE)
-      project.building.add_edge(
-        level_idx,
-        prev_clicked_idx,
-        clicked_idx,
-        edge_type);
-    else
-    {
-      project.add_lane(
-        level_idx,
-        prev_clicked_idx,
-        clicked_idx);
-    }
+    undo_stack.push(latest_add_edge);
 
     if (edge_type == Edge::DOOR || edge_type == Edge::MEAS)
     {
       clicked_idx = -1;  // doors and measurements don't usually chain
+      latest_add_edge = NULL;
       remove_mouse_motion_item();
     }
-
+    else
+    {
+      latest_add_edge = new AddEdgeCommand(&project, level_idx);
+      latest_add_edge->set_first_point(p_aligned.x(), p_aligned.y());
+      latest_add_edge->set_edge_type(edge_type);
+    }
+    prev_clicked_idx = clicked_idx;
     create_scene();
     setWindowModified(true);
   }
@@ -1834,6 +1973,12 @@ void Editor::mouse_add_door(
   mouse_add_edge(t, e, p, Edge::DOOR);
 }
 
+void Editor::mouse_add_human_lane(
+  const MouseType t, QMouseEvent* e, const QPointF& p)
+{
+  mouse_add_edge(t, e, p, Edge::HUMAN_LANE);
+}
+
 void Editor::mouse_add_model(
   const MouseType t, QMouseEvent*, const QPointF& p)
 {
@@ -1841,19 +1986,15 @@ void Editor::mouse_add_model(
   {
     if (mouse_motion_editor_model == nullptr)
       return;
-    project.building.add_model(
+
+    AddModelCommand* cmd = new AddModelCommand(
+      &project,
       level_idx,
       p.x(),
       p.y(),
-      0.0,
-      M_PI / 2.0,
-      mouse_motion_editor_model->name);
-    /*
-    const int model_row = model_name_list_widget->currentRow();
-    if (model_row < 0)
-      return;  // nothing currently selected. nothing to do.
-    .add_model(level_idx, p.x(), p.y(), 0.0, editor_models[model_row].name);
-    */
+      mouse_motion_editor_model->name
+    );
+    undo_stack.push(cmd);
     setWindowModified(true);
     create_scene();
   }
@@ -1902,6 +2043,8 @@ void Editor::mouse_rotate(
     if (clicked_idx < 0)
       return;// nothing to do. click wasn't on a model.
 
+    latest_rotate_model = new RotateModelCommand(&project, level_idx,
+        clicked_idx);
     const Model& model =
       project.building.levels[level_idx].models[clicked_idx];
     mouse_motion_model = get_closest_pixmap_item(
@@ -1934,7 +2077,8 @@ void Editor::mouse_rotate(
     double mouse_yaw = atan2(dy, dx);
     if (mouse_event->modifiers() & Qt::ShiftModifier)
       mouse_yaw = discretize_angle(mouse_yaw);
-    project.building.set_model_yaw(level_idx, clicked_idx, mouse_yaw);
+    latest_rotate_model->set_final_destination(mouse_yaw);
+    undo_stack.push(latest_rotate_model);
     clicked_idx = -1;  // we're done rotating it now
     setWindowModified(true);
     // now re-render the whole scene (could optimize in the future...)
@@ -2047,10 +2191,14 @@ void Editor::mouse_add_polygon(
         {
           polygon.vertices.push_back(i);
         }
-        if (mode == MODE_BUILDING)
-          project.building.levels[level_idx].polygons.push_back(polygon);
-        else if (mode == MODE_SCENARIO)
-          project.scenario_level(level_idx)->polygons.push_back(polygon);
+
+        AddPolygonCommand* command = new AddPolygonCommand(
+          &project,
+          mode,
+          polygon,
+          level_idx);
+
+        undo_stack.push(command);
       }
       scene->removeItem(mouse_motion_polygon);
       delete mouse_motion_polygon;
@@ -2132,7 +2280,9 @@ void Editor::mouse_edit_polygon(
       {
         printf("removing vertex %d\n", ni.vertex_idx);
       }
-      selected_polygon->remove_vertex(ni.vertex_idx);
+      PolygonRemoveVertCommand* command = new PolygonRemoveVertCommand(
+        selected_polygon, ni.vertex_idx);
+      undo_stack.push(command);
       setWindowModified(true);
       create_scene();
     }
@@ -2187,10 +2337,12 @@ void Editor::mouse_edit_polygon(
         release_vertex_idx) != selected_polygon->vertices.end())
       return;// Release vertex is already in the polygon. Don't do anything.
 
-    selected_polygon->vertices.insert(
-      selected_polygon->vertices.begin() +
+    PolygonAddVertCommand* command = new PolygonAddVertCommand(
+      selected_polygon,
       mouse_edge_drag_polygon.movable_vertex,
       release_vertex_idx);
+
+    undo_stack.push(command);
 
     setWindowModified(true);
     create_scene();
@@ -2257,15 +2409,19 @@ bool Editor::maybe_save()
 void Editor::showEvent(QShowEvent* event)
 {
   QMainWindow::showEvent(event);
+#ifdef HAS_IGNITION_PLUGIN
   sim_thread.start();
+#endif
 }
 
 void Editor::closeEvent(QCloseEvent* event)
 {
+#ifdef HAS_IGNITION_PLUGIN
   printf("waiting on sim_thread...\n");
   sim_thread.requestInterruption();
   sim_thread.quit();
   sim_thread.wait();
+#endif
 
   // save window geometry
   QSettings settings;
@@ -2337,8 +2493,12 @@ void Editor::set_mode(const EditorModeId _mode, const QString& mode_string)
   // scenario tools
   set_tool_visibility(TOOL_ADD_ROI, mode == MODE_SCENARIO);
 
+  // crowd_sim tools
+  set_tool_visibility(TOOL_ADD_HUMAN_LANE, mode == MODE_CROWD_SIM);
+
   // "multi-purpose" tools
-  set_tool_visibility(TOOL_EDIT_POLYGON, mode != MODE_TRAFFIC);
+  set_tool_visibility(TOOL_EDIT_POLYGON,
+    mode != MODE_TRAFFIC && mode != MODE_CROWD_SIM);
 }
 
 void Editor::update_tables()
@@ -2348,8 +2508,26 @@ void Editor::update_tables()
   lift_table->update(project.building);
   scenario_table->update(project);
   traffic_table->update(project);
+  crowd_sim_table->update();
 }
 
+void Editor::clear_current_tool_buffer()
+{
+  if (
+    tool_id == TOOL_ADD_WALL
+    || tool_id == TOOL_ADD_LANE
+    || tool_id == TOOL_ADD_MEAS
+    || tool_id == TOOL_ADD_HUMAN_LANE
+    || tool_id == TOOL_ADD_DOOR)
+  {
+    prev_clicked_idx = -1;
+    clicked_idx = -1;
+    delete latest_add_edge;
+    latest_add_edge = NULL;
+  }
+}
+
+#ifdef HAS_IGNITION_PLUGIN
 void Editor::sim_reset()
 {
   printf("TODO: sim_reset()\n");
@@ -2360,6 +2538,14 @@ void Editor::sim_play_pause()
 {
   printf("sim_play_pause()\n");
   project.sim_is_paused = !project.sim_is_paused;
+}
+
+void Editor::sim_tick()
+{
+  // called from sim thread
+
+  if (!project.sim_is_paused)
+    project.sim_tick();
 }
 
 #ifdef HAS_OPENCV
@@ -2400,12 +2586,6 @@ void Editor::record_frame_to_video()
 
   video_writer->write(mat_rgb_swap);
 }
-#endif
+#endif  // HAS_OPENCV
 
-void Editor::sim_tick()
-{
-  // called from sim thread
-
-  if (!project.sim_is_paused)
-    project.sim_tick();
-}
+#endif  // HAS_IGNITION_PLUGIN

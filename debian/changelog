@@ -1,0 +1,29 @@
+ros-foxy-building-ignition-plugins (1.2.0-2focal) focal; urgency=high
+
+  * Remove Slotcar/Lift AABB component when not required to speed up demos (#271 <https://github.com/osrf/traffic_editor/issues/271>)
+  * Migrate ignition plugins to ament_target_dependencies (#262 <https://github.com/osrf/traffic_editor/issues/262>)
+  * Enable lifts to work with TPE (#250 <https://github.com/osrf/traffic_editor/issues/250>)
+    Modifies lift plugin to issue either joint or model velocity commands
+    based on the physics engine used.
+  * Control slotcar with model velocity cmds in place of joint velocity cmds (#236 <https://github.com/osrf/traffic_editor/issues/236>)
+  * Implement battery drain and recharge for slotcars (#242 <https://github.com/osrf/traffic_editor/issues/242>)
+  * Implement animation switching in crowd simulation (#238 <https://github.com/osrf/traffic_editor/issues/238>)
+  * Add first pass of quality declarations for all packages (#235 <https://github.com/osrf/traffic_editor/issues/235>)
+  * Building_crowdsim for generating the navmesh file and required configuration files for menge (#224 <https://github.com/osrf/traffic_editor/issues/224>)
+  * Add animation switch to crowd simulation plugin (#238 <https://github.com/osrf/traffic_editor/pull/238>)
+  * Contributors: Geoffrey Biggs, Guoliang (Fred) Shao, Luca Della Vedova, Marco A. Gutierrez, Marco A. Gutiérrez, Rushyendra Maganty
+
+ -- Luca Della Vedova <luca@openrobotics.org>  Tue, 05 Jan 2021 16:00:00 -0000
+
+ros-foxy-building-ignition-plugins (1.0.0-2focal) focal; urgency=high
+
+  * Focal / Ignition dome dependencies update (#230 <https://github.com/osrf/traffic_editor/issues/230>)
+  * Ignition crowd simulation plugin (#218 <https://github.com/osrf/traffic_editor/issues/218>)
+  * Create AxisAlignedBox component for slotcar (#227 <https://github.com/osrf/traffic_editor/issues/227>)
+  * Ignition plugins and modularization of doors and slotcar #138 <https://github.com/osrf/traffic_editor/issues/138>
+  * Adding lift plugin for ignition #171 <https://github.com/osrf/traffic_editor/issues/171>
+  * Contributors: Guoliang (Fred) Shao, Luca Della Vedova, Rushyendra Maganty, kevinskwk
+
+ -- Luca Della Vedova <luca@openrobotics.org>  Wed, 23 Sep 2020 16:00:00 -0000
+
+

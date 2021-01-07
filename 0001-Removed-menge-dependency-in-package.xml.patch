@@ -1,4 +1,4 @@
-From 813d4242f506f0bb3926b0617fbc6bdc5d0fc12c Mon Sep 17 00:00:00 2001
+From 805032bd20ae71995471c7d6c31c59d865a9f059 Mon Sep 17 00:00:00 2001
 From: "Marco A. Gutierrez" <marcogg@marcogg.com>
 Date: Thu, 1 Oct 2020 02:47:36 +0000
 Subject: [PATCH] Removed menge dependency in package.xml
@@ -8,10 +8,10 @@ Subject: [PATCH] Removed menge dependency in package.xml
  1 file changed, 1 deletion(-)
 
 diff --git a/package.xml b/package.xml
-index 7f990a5..b1dee50 100644
+index 857ea74..2cc09eb 100644
 --- a/package.xml
 +++ b/package.xml
-@@ -26,7 +26,6 @@
+@@ -27,7 +27,6 @@
    <depend>geometry_msgs</depend>
    <depend>std_msgs</depend>
    <depend>std_srvs</depend>

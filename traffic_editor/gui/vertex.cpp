@@ -34,18 +34,21 @@ const vector<pair<string, Param::Type>> Vertex::allowed_params
   { "spawn_robot_type", Param::Type::STRING },
   { "spawn_robot_name", Param::Type::STRING },
   { "is_holding_point", Param::Type::BOOL },
-  { "is_passthrough_point", Param::Type::BOOL }
+  { "is_passthrough_point", Param::Type::BOOL },
+  { "human_goal_set_name", Param::Type::STRING },
 };
 
 
 Vertex::Vertex()
 : x(0), y(0), selected(false)
 {
+  uuid = QUuid::createUuid();
 }
 
 Vertex::Vertex(double _x, double _y, const string& _name)
 : x(_x), y(_y), name(_name), selected(false)
 {
+  uuid = QUuid::createUuid();
 }
 
 void Vertex::from_yaml(const YAML::Node& data)

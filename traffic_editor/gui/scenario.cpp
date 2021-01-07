@@ -16,10 +16,7 @@
 */
 
 #include <fstream>
-
-#ifdef HAS_IGNITION_PLUGIN
 #include <ignition/common/SystemPaths.hh>
-#endif
 
 #include "scenario.h"
 #include "yaml_utils.h"
@@ -65,7 +62,6 @@ bool Scenario::load()
     }
   }
 
-#ifdef HAS_IGNITION_PLUGIN
   if (yaml["plugin_name"])
   {
     string plugin_path = yaml["plugin_path"].as<string>();
@@ -116,7 +112,6 @@ bool Scenario::load()
       }
     }
   }
-#endif
 
   print();
 
@@ -206,7 +201,6 @@ bool Scenario::delete_selected(const std::string& level_name)
   return true;
 }
 
-#ifdef HAS_IGNITION_PLUGIN
 void Scenario::sim_tick(Building& building)
 {
   if (!sim_plugin.IsEmpty())
@@ -256,4 +250,3 @@ void Scenario::scene_update(
       sim->scene_update(scene, building, level_idx);
   }
 }
-#endif

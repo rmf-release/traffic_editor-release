@@ -32,7 +32,7 @@ class QGraphicsScene;
 
 #include "building_level.h"
 #include "lift.h"
-#include <traffic_editor/crowd_sim/crowd_sim_impl.h>
+
 
 class Building
 {
@@ -46,8 +46,6 @@ public:
   std::vector<Lift> lifts;
   std::mutex building_mutex;
 
-  mutable crowd_sim::CrowdSimImplPtr crowd_sim_impl;
-
   std::string filename;
 
   bool load_yaml_file();
@@ -57,7 +55,7 @@ public:
   void add_level(const BuildingLevel& level);
 
   void add_vertex(int level_index, double x, double y);
-  QUuid add_fiducial(int level_index, double x, double y);
+  void add_fiducial(int level_index, double x, double y);
 
   int find_nearest_vertex_index(
     int level_index, double x, double y, double& distance);
@@ -99,7 +97,7 @@ public:
     const int end_idx,
     const int graph_idx);
 
-  QUuid add_model(
+  void add_model(
     const int level_idx,
     const double x,
     const double y,

@@ -1,0 +1,27 @@
+From bc5c8c48fda0dd24c3ec9cf6dd74a4c49cb589a7 Mon Sep 17 00:00:00 2001
+From: "Marco A. Gutierrez" <marco@openrobotics.org>
+Date: Thu, 7 Jan 2021 16:53:04 +0800
+Subject: [PATCH 2/9] Revert "removing tests"
+
+This reverts commit e7908a2766a621e83998612a66f56d9a7778ef9c.
+---
+ setup.cfg | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/setup.cfg b/setup.cfg
+index 12b1ebd..e54e17e 100644
+--- a/setup.cfg
++++ b/setup.cfg
+@@ -5,6 +5,8 @@ install-scripts=$base/lib/building_map_tools
+ 
+ [options]
+ setup_requires = pytest-runner
++tests_require = pytest
+ 
+ [tool:pytest]
+ addopts = --verbose
++testpaths = test
+\ No newline at end of file
+-- 
+2.25.1
+

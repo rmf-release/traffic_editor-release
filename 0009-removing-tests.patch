@@ -1,0 +1,27 @@
+From f3e18af01b092559a85dbfd5800c096d0e189cfe Mon Sep 17 00:00:00 2001
+From: "Marco A. Gutierrez" <marco@openrobotics.org>
+Date: Thu, 7 Jan 2021 16:57:38 +0800
+Subject: [PATCH 9/9] removing tests
+
+Signed-off-by: Marco A. Gutierrez <marco@openrobotics.org>
+---
+ setup.cfg | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/setup.cfg b/setup.cfg
+index e54e17e..12b1ebd 100644
+--- a/setup.cfg
++++ b/setup.cfg
+@@ -5,8 +5,6 @@ install-scripts=$base/lib/building_map_tools
+ 
+ [options]
+ setup_requires = pytest-runner
+-tests_require = pytest
+ 
+ [tool:pytest]
+ addopts = --verbose
+-testpaths = test
+\ No newline at end of file
+-- 
+2.25.1
+

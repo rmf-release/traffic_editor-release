@@ -29,22 +29,11 @@
 #include <QGraphicsScene>
 #include <QMainWindow>
 #include <QSettings>
-#include <QUndoStack>
 
 #include "project.h"
-#include "actions/add_edge.h"
-#include "actions/move_fiducial.h"
-#include "actions/move_model.h"
-#include "actions/move_vertex.h"
-#include "actions/rotate_model.h"
 #include "traffic_editor/editor_model.h"
 #include "editor_mode_id.h"
-
-#ifdef HAS_IGNITION_PLUGIN
 #include "sim_thread.h"
-#endif
-
-#include "crowd_sim/crowd_sim_editor_table.h"
 
 class BuildingLevelTable;
 class MapView;
@@ -52,7 +41,6 @@ class Level;
 class LiftTable;
 class ScenarioTable;
 class TrafficTable;
-class CrowdSimTable;
 
 #ifdef HAS_OPENCV
 namespace cv {
@@ -109,8 +97,6 @@ protected:
   void showEvent(QShowEvent* event) override;
 
 private:
-
-  QUndoStack undo_stack;
   EditorModeId mode = MODE_BUILDING;
 
   void set_mode(const EditorModeId _mode, const QString& mode_string);
@@ -132,11 +118,9 @@ private:
     TOOL_ADD_FIDUCIAL,
     TOOL_ADD_ROI,
     TOOL_ADD_HOLE,
-    TOOL_ADD_HUMAN_LANE,
   } tool_id = TOOL_SELECT;
 
   std::map<ToolId, QAction*> tools;
-
   void set_tool_visibility(const ToolId id, const bool visible);
 
   /////////////////
@@ -146,8 +130,6 @@ private:
   bool project_save();
 
   bool maybe_save();
-  void edit_undo();
-  void edit_redo();
   void edit_preferences();
   void edit_building_properties();
   void edit_project_properties();
@@ -179,7 +161,6 @@ private:
   Project project;
   int level_idx = 0;  // level that we are currently editing
   int clicked_idx = -1;  // point most recently clicked
-  int prev_clicked_idx = -1; // Previously clicked ID.
   //int polygon_idx = -1;  // currently selected polygon
   Polygon* selected_polygon = nullptr;
 
@@ -214,7 +195,6 @@ private:
   LiftTable* lift_table;
   ScenarioTable* scenario_table;
   TrafficTable* traffic_table;
-  CrowdSimEditorTable* crowd_sim_table;
 
   QTableWidget* property_editor;
   void update_property_editor();
@@ -247,24 +227,19 @@ private:
   QPushButton* add_param_button, * delete_param_button;
   void add_param_button_clicked();
   void delete_param_button_clicked();
-  void clear_current_tool_buffer(); // Necessary for tools like edge drawing that store temporary states
 
-#ifdef HAS_IGNITION_PLUGIN
   QAction* sim_reset_action;
   QAction* sim_play_pause_action;
   void sim_reset();
   void sim_play_pause();
   SimThread sim_thread;
-  QTimer* scene_update_timer;
-  void scene_update_timer_timeout();
-#endif
 
 public:
   void sim_tick();  // called by SimThread
 
 private:
 
-#if defined(HAS_IGNITION_PLUGIN) && defined(HAS_OPENCV)
+#ifdef HAS_OPENCV
   QAction* record_start_stop_action;
   bool is_recording = false;
   void record_start_stop();
@@ -341,17 +316,10 @@ private:
   void mouse_add_roi(const MouseType t, QMouseEvent* e, const QPointF& p);
   void mouse_edit_polygon(const MouseType t, QMouseEvent* e, const QPointF& p);
 
-  void mouse_add_human_lane(const MouseType t, QMouseEvent* e,
-    const QPointF& p);
-
   QPointF previous_mouse_point;
 
-  // For undo related support
-  AddEdgeCommand* latest_add_edge;
-  MoveFiducialCommand* latest_move_fiducial;
-  MoveModelCommand* latest_move_model;
-  MoveVertexCommand* latest_move_vertex;
-  RotateModelCommand* latest_rotate_model;
+  QTimer* scene_update_timer;
+  void scene_update_timer_timeout();
 };
 
 #endif

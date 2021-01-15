@@ -43,7 +43,6 @@ private:
   std::vector<Vertex> _vert_snapshot, _final_snapshot;
   int _vert_id_first, _vert_id_second;
   Edge::Type _type;
-  const double _vertex_radius_meters = 0.1;
 };
 
 

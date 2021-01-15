@@ -1,0 +1,12 @@
+Source: ros-rolling-traffic-editor
+Section: misc
+Priority: optional
+Maintainer: Morgan Quigley <morgan@openrobotics.org>
+Build-Depends: debhelper (>= 9.0.0), libignition-common3-dev, libignition-plugin-dev, libqt5concurrent5, libqt5widgets5, libyaml-cpp-dev, qtbase5-dev, ros-rolling-ament-cmake, ros-rolling-ament-index-cpp, ros-rolling-ros-workspace
+Homepage: 
+Standards-Version: 3.9.2
+
+Package: ros-rolling-traffic-editor
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ros-rolling-ros-workspace
+Description: traffic editor
